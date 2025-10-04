@@ -1,0 +1,28 @@
+@page
+@model WebApp.Pages.Pools.IndexModel
+@{
+    ViewData["Title"] = "Pools";
+}
+<h1>Pools</h1>
+<a asp-page="Create">Create New Pool</a>
+<table class="table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var pool in Model.Pools)
+    {
+        <tr>
+            <td>@pool.Name</td>
+            <td>
+                <a asp-page="Edit" asp-route-id="@pool.Id">Edit</a> |
+                <a asp-page="Details" asp-route-id="@pool.Id">Details</a> |
+                <a asp-page="Delete" asp-route-id="@pool.Id">Delete</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>

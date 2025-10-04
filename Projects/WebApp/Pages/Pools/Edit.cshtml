@@ -1,0 +1,16 @@
+@page "{id:int}"
+@model WebApp.Pages.Pools.EditModel
+@{
+    ViewData["Title"] = "Edit Pool";
+}
+<h1>Edit Pool</h1>
+<form method="post">
+    <input type="hidden" asp-for="Pool.Id" />
+    <div class="mb-3">
+        <label asp-for="Pool.Name" class="form-label"></label>
+        <input asp-for="Pool.Name" class="form-control" />
+        <span asp-validation-for="Pool.Name" class="text-danger"></span>
+    </div>
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-page="Index" class="btn btn-secondary">Back to List</a>
+</form>

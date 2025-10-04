@@ -1,0 +1,13 @@
+@page "{id:int}"
+@model WebApp.Pages.Pools.DeleteModel
+@{
+    ViewData["Title"] = "Delete Pool";
+}
+<h1>Delete Pool</h1>
+<div>
+    <strong>Name:</strong> @Model.Pool.Name
+</div>
+<form method="post">
+    <button type="submit" class="btn btn-danger">Delete</button>
+    <a asp-page="Index" class="btn btn-secondary">Cancel</a>
+</form>
