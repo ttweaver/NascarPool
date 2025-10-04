@@ -1,0 +1,13 @@
+@page "{id:int}"
+@model DeleteModel
+@{
+    ViewData["Title"] = "Delete User";
+}
+<h1>Delete User</h1>
+<div>
+    <strong>UserName:</strong> @Model.User.UserName
+</div>
+<form method="post">
+    <button type="submit">Delete</button>
+    <a asp-page="Index">Cancel</a>
+</form>

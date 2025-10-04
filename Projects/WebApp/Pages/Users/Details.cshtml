@@ -1,0 +1,10 @@
+@page "{id:int}"
+@model DetailsModel
+@{
+    ViewData["Title"] = "User Details";
+}
+<h1>User Details</h1>
+<div>
+    <strong>UserName:</strong> @Model.User.UserName
+</div>
+<a asp-page="Index">Back to List</a>
