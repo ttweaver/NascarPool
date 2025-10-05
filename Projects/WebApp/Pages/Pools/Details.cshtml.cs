@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
 using WebApp.Models;
 using System.Threading.Tasks;
-using System.Linq;
 
 namespace WebApp.Pages.Pools
 {
@@ -19,6 +18,7 @@ namespace WebApp.Pages.Pools
         {
             Pool = await _context.Pools
                 .Include(p => p.Members)
+                .Include(p => p.Drivers) // Ensure this navigation property exists in your Pool model
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (Pool == null) return NotFound();

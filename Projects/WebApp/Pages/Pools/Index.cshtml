@@ -9,6 +9,7 @@
     <thead class="table-light">
         <tr>
             <th>Name</th>
+            <th>Year</th>
             <th style="width: 300px;"></th>
         </tr>
     </thead>
@@ -17,6 +18,7 @@
     {
         <tr>
             <td>@pool.Name</td>
+            <td>@pool.Year</td>
             <td>
                 <a asp-page="Edit" asp-route-id="@pool.Id" class="btn btn-sm btn-warning me-1">Edit</a>
                 <a asp-page="Details" asp-route-id="@pool.Id" class="btn btn-sm btn-info me-1">Details</a>

@@ -10,6 +10,11 @@
         <input asp-for="Pool.Name" class="form-control" />
         <span asp-validation-for="Pool.Name" class="text-danger"></span>
     </div>
+    <div class="mb-3">
+        <label asp-for="Pool.Year" class="form-label"></label>
+        <input asp-for="Pool.Year" class="form-control" type="number" min="1900" max="2100" />
+        <span asp-validation-for="Pool.Year" class="text-danger"></span>
+    </div>
     <div class="d-grid mb-2">
         <button type="submit" class="btn btn-success w-100">Create</button>
     </div>

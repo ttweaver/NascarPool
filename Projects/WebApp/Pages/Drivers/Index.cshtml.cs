@@ -5,6 +5,7 @@ using WebApp.Data;
 using WebApp.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace WebApp.Pages.Drivers
 {
@@ -21,9 +22,14 @@ namespace WebApp.Pages.Drivers
         [BindProperty]
         public string CarNumber { get; set; } = string.Empty;
 
+        [BindProperty]
+        public int DriverId { get; set; }
+
         public async Task OnGetAsync()
         {
-            Drivers = await _context.Drivers.ToListAsync();
+            Drivers = await _context.Drivers
+                .Include(d => d.Pool)
+                .ToListAsync();
         }
 
         public async Task<IActionResult> OnPostCreateAsync()
@@ -35,10 +41,23 @@ namespace WebApp.Pages.Drivers
                 return Page();
             }
 
+            // Find the current season (latest pool by year)
+            var currentPool = _context.Pools.AsEnumerable()
+                .Where(p => p.CurrentYear)
+				.FirstOrDefault();
+
+            if (currentPool == null)
+            {
+                ModelState.AddModelError(string.Empty, "No pool found for the current season.");
+                await OnGetAsync();
+                return Page();
+            }
+
             var driver = new Driver
             {
                 Name = DriverName.Trim(),
-                CarNumber = CarNumber.Trim()
+                CarNumber = CarNumber.Trim(),
+                PoolId = currentPool.Id
             };
 
             _context.Drivers.Add(driver);
@@ -46,9 +65,6 @@ namespace WebApp.Pages.Drivers
 
             return RedirectToPage();
         }
-
-        [BindProperty]
-        public int DriverId { get; set; }
 
         public async Task<IActionResult> OnPostDeleteAsync()
         {

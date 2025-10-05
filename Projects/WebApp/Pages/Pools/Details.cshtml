@@ -8,6 +8,8 @@
     <dl class="row">
         <dt class="col-sm-3">Name:</dt>
         <dd class="col-sm-9">@Model.Pool.Name</dd>
+        <dt class="col-sm-3">Year:</dt>
+        <dd class="col-sm-9">@Model.Pool.Year</dd>
     </dl>
 </div>
 
@@ -29,6 +31,26 @@
 else
 {
     <div class="alert alert-info">No users have been added to this pool yet.</div>
+}
+
+@if (Model.Pool.Drivers != null && Model.Pool.Drivers.Any())
+{
+    <h2 class="h5 mt-4">Drivers in this Pool</h2>
+    <ul class="list-group mb-3">
+        @foreach (var driver in Model.Pool.Drivers)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>
+                    <strong>@driver.Name</strong>
+                    <span class="text-muted ms-2">#@driver.CarNumber</span>
+                </span>
+            </li>
+        }
+    </ul>
+}
+else
+{
+    <div class="alert alert-info">No drivers have been added to this pool yet.</div>
 }
 
 <a asp-page="Index" class="btn btn-secondary">Back to List</a>
