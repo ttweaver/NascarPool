@@ -9,7 +9,7 @@
     <thead class="table-light">
         <tr>
             <th>Name</th>
-            <th style="width: 200px;"></th>
+            <th style="width: 300px;"></th>
         </tr>
     </thead>
     <tbody>
@@ -20,7 +20,8 @@
             <td>
                 <a asp-page="Edit" asp-route-id="@pool.Id" class="btn btn-sm btn-warning me-1">Edit</a>
                 <a asp-page="Details" asp-route-id="@pool.Id" class="btn btn-sm btn-info me-1">Details</a>
-                <a asp-page="Delete" asp-route-id="@pool.Id" class="btn btn-sm btn-danger">Delete</a>
+                <a asp-page="Delete" asp-route-id="@pool.Id" class="btn btn-sm btn-danger me-1">Delete</a>
+                <a asp-page="AddUsers" asp-route-id="@pool.Id" class="btn btn-sm btn-success">Add Users</a>
             </td>
         </tr>
     }

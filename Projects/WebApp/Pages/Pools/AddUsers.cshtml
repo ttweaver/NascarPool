@@ -1,0 +1,23 @@
+@page
+@model WebApp.Pages.Pools.AddUsersModel
+@{
+    ViewData["Title"] = "Add Users to Pool";
+}
+<h1 class="mb-4">Add Users to Pool</h1>
+<form method="post" class="card card-body shadow-sm">
+    <div class="mb-3">
+        <label asp-for="PoolId" class="form-label">Select Pool</label>
+        <select asp-for="PoolId" class="form-select" asp-items="@(new SelectList(Model.Pools, "Id", "Name"))"></select>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">Select Users</label>
+        <select asp-for="SelectedUserIds" class="form-select" multiple size="8">
+            @foreach (var user in Model.Users)
+            {
+                <option value="@user.Id">@user.UserName</option>
+            }
+        </select>
+    </div>
+    <button type="submit" class="btn btn-success">Add Users</button>
+    <a asp-page="Index" class="btn btn-secondary ms-2">Back to Pools</a>
+</form>
