@@ -3,29 +3,32 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using WebApp.Data;
 using WebApp.Models;
 
-public class DeleteModel : PageModel
+namespace WebApp.Pages.Users
 {
-    private readonly ApplicationDbContext _context;
-    public DeleteModel(ApplicationDbContext context) => _context = context;
-
-    [BindProperty]
-    public User User { get; set; } = default!;
-
-    public async Task<IActionResult> OnGetAsync(int id)
+    public class DeleteModel : PageModel
     {
-        User = await _context.Users.FindAsync(id);
-        if (User == null) return NotFound();
-        return Page();
-    }
+        private readonly ApplicationDbContext _context;
+        public DeleteModel(ApplicationDbContext context) => _context = context;
 
-    public async Task<IActionResult> OnPostAsync(int id)
-    {
-        var user = await _context.Users.FindAsync(id);
-        if (user != null)
+        [BindProperty]
+        public User User { get; set; } = default!;
+
+        public async Task<IActionResult> OnGetAsync(int id)
         {
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync();
+            User = await _context.Users.FindAsync(id);
+            if (User == null) return NotFound();
+            return Page();
         }
-        return RedirectToPage("Index");
+
+        public async Task<IActionResult> OnPostAsync(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user != null)
+            {
+                _context.Users.Remove(user);
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToPage("Index");
+        }
     }
 }

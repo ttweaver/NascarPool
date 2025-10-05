@@ -3,8 +3,11 @@
 @{
     ViewData["Title"] = "Pool Details";
 }
-<h1>Pool Details</h1>
-<div>
-    <strong>Name:</strong> @Model.Pool.Name
+<h1 class="mb-4">Pool Details</h1>
+<div class="card card-body shadow-sm mb-3">
+    <dl class="row">
+        <dt class="col-sm-3">Name:</dt>
+        <dd class="col-sm-9">@Model.Pool.Name</dd>
+    </dl>
 </div>
 <a asp-page="Index" class="btn btn-secondary">Back to List</a>
