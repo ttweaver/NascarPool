@@ -17,13 +17,15 @@ namespace WebApp.Pages.Races
 
         public IList<Race> Races { get; set; } = default!;
         public IList<Pool> Pools { get; set; } = default!;
+        public IList<User> Users { get; set; } = default!;
+        public IList<Driver> Drivers { get; set; } = default!; // Assuming picks are drivers
 
         public async Task OnGetAsync()
         {
-            Races = await _context.Races
-                .Include(r => r.Pool)
-                .ToListAsync();
+            Races = await _context.Races.Include(r => r.Pool).ToListAsync();
             Pools = await _context.Pools.ToListAsync();
+            Users = await _context.Users.ToListAsync();      // Add this
+            Drivers = await _context.Drivers.ToListAsync();  // Add this (or whatever entity is used for picks)
         }
 
         // CREATE
@@ -150,6 +152,52 @@ namespace WebApp.Pages.Races
                 _context.Races.Remove(race);
                 await _context.SaveChangesAsync();
             }
+            return RedirectToPage();
+        }
+
+        // ENTER PICKS
+        public async Task<IActionResult> OnPostEnterPicksAsync()
+        {
+            var raceIdStr = Request.Form["EnterPicksRaceId"];
+            var userIdStr = Request.Form["EnterPicksUser"];
+            var pick1IdStr = Request.Form["EnterPick1"];
+            var pick2IdStr = Request.Form["EnterPick2"];
+            var pick3IdStr = Request.Form["EnterPick3"];
+
+            if (!int.TryParse(raceIdStr, out var raceId) ||
+                !int.TryParse(userIdStr, out var userId) ||
+                !int.TryParse(pick1IdStr, out var pick1Id) ||
+                !int.TryParse(pick2IdStr, out var pick2Id) ||
+                !int.TryParse(pick3IdStr, out var pick3Id))
+            {
+                ModelState.AddModelError(string.Empty, "All fields are required.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            // Optional: Check for duplicate picks for the same user/race
+            var existingPick = await _context.Picks
+                .FirstOrDefaultAsync(p => p.RaceId == raceId && p.UserId == userId);
+
+            if (existingPick != null)
+            {
+                ModelState.AddModelError(string.Empty, "Picks for this user and race already exist.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            var pick = new Pick
+            {
+                RaceId = raceId,
+                UserId = userId,
+                Pick1Id = pick1Id,
+                Pick2Id = pick2Id,
+                Pick3Id = pick3Id
+            };
+
+            _context.Picks.Add(pick);
+            await _context.SaveChangesAsync();
+
             return RedirectToPage();
         }
     }
