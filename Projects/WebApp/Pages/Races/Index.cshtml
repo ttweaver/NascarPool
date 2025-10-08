@@ -21,6 +21,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div asp-validation-summary="All" class="text-danger mb-2"></div>
                     <div class="mb-3">
                         <label for="CreateRaceName" class="form-label">Name</label>
                         <input type="text" class="form-control" id="CreateRaceName" name="CreateRaceName" required />
@@ -172,6 +173,11 @@
     </tbody>
 </table>
 
+@if (!ViewData.ModelState.IsValid && Request.Method == "POST" && Request.Form["CreateRaceName"].Count > 0)
+{
+    <span id="showCreateModal"></span>
+}
+
 @section Scripts {
 <script>
     // Edit modal population
@@ -199,6 +205,13 @@
         document.getElementById('DetailsRaceName').textContent = button.getAttribute('data-race-name');
         document.getElementById('DetailsRaceDate').textContent = button.getAttribute('data-race-date');
         document.getElementById('DetailsRacePool').textContent = button.getAttribute('data-race-pool');
+    });
+
+    window.addEventListener('DOMContentLoaded', function () {
+        if (document.getElementById('showCreateModal')) {
+            var createModal = new bootstrap.Modal(document.getElementById('createRaceModal'));
+            createModal.show();
+        }
     });
 </script>
 }

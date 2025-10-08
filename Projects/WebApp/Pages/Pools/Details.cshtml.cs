@@ -18,7 +18,8 @@ namespace WebApp.Pages.Pools
         {
             Pool = await _context.Pools
                 .Include(p => p.Members)
-                .Include(p => p.Drivers) // Ensure this navigation property exists in your Pool model
+                .Include(p => p.Drivers)
+                .Include(p => p.Races)
                 .FirstOrDefaultAsync(p => p.Id == id);
 
             if (Pool == null) return NotFound();

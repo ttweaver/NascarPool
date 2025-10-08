@@ -53,6 +53,33 @@ else
     <div class="alert alert-info">No drivers have been added to this pool yet.</div>
 }
 
+<!-- Collapsible Races Section -->
+<div class="mb-4">
+    <button class="btn btn-outline-primary w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#racesCollapse" aria-expanded="false" aria-controls="racesCollapse">
+        Races in this Pool
+    </button>
+    <div class="collapse mt-3" id="racesCollapse">
+        @if (Model.Pool.Races != null && Model.Pool.Races.Any())
+        {
+            <ul class="list-group">
+                @foreach (var race in Model.Pool.Races.OrderBy(r => r.Date))
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <strong>@race.Name</strong>
+                            <span class="text-muted ms-2">@race.Date.ToShortDateString()</span>
+                        </span>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <div class="alert alert-info">No races have been added to this pool yet.</div>
+        }
+    </div>
+</div>
+
 <a asp-page="Index" class="btn btn-secondary">Back to List</a>
 
 <!-- Bootstrap Modal for Remove Confirmation -->
