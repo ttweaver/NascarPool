@@ -250,6 +250,21 @@
     <span id="showCreateModal"></span>
 }
 
+@{
+    var picksJson = System.Text.Json.JsonSerializer.Serialize(
+        Model.Picks.Select(p => new {
+            userId = p.UserId,
+            raceId = p.RaceId,
+            pick1Id = p.Pick1Id,
+            pick2Id = p.Pick2Id,
+            pick3Id = p.Pick3Id
+        })
+    );
+}
+<script>
+    var existingPicks = @Html.Raw(picksJson);
+</script>
+
 @section Scripts {
 <script>
     // Edit modal population
@@ -285,6 +300,26 @@
         var button = event.relatedTarget;
         document.getElementById('EnterPicksRaceId').value = button.getAttribute('data-race-id');
         document.getElementById('EnterPicksRaceName').textContent = button.getAttribute('data-race-name');
+    });
+
+    document.getElementById('EnterPicksUser').addEventListener('change', function () {
+        var userId = this.value;
+        var raceId = document.getElementById('EnterPicksRaceId').value;
+
+        // Find the pick for this user and race
+        var pick = existingPicks.find(function (p) {
+            return p.userId == userId && p.raceId == raceId;
+        });
+
+        if (pick) {
+            document.getElementById('EnterPick1').value = pick.pick1Id;
+            document.getElementById('EnterPick2').value = pick.pick2Id;
+            document.getElementById('EnterPick3').value = pick.pick3Id;
+        } else {
+            document.getElementById('EnterPick1').value = "";
+            document.getElementById('EnterPick2').value = "";
+            document.getElementById('EnterPick3').value = "";
+        }
     });
 
     window.addEventListener('DOMContentLoaded', function () {

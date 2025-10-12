@@ -19,6 +19,7 @@ namespace WebApp.Pages.Races
         public IList<Pool> Pools { get; set; } = default!;
         public IList<User> Users { get; set; } = default!;
         public IList<Driver> Drivers { get; set; } = default!; // Assuming picks are drivers
+        public IList<Pick> Picks { get; set; } = new List<Pick>();
 
         public async Task OnGetAsync()
         {
@@ -26,6 +27,7 @@ namespace WebApp.Pages.Races
             Pools = await _context.Pools.ToListAsync();
             Users = await _context.Users.ToListAsync();      // Add this
             Drivers = await _context.Drivers.ToListAsync();  // Add this (or whatever entity is used for picks)
+            Picks = await _context.Picks.ToListAsync();
         }
 
         // CREATE
@@ -175,27 +177,38 @@ namespace WebApp.Pages.Races
                 return Page();
             }
 
-            // Optional: Check for duplicate picks for the same user/race
+            // Ensure picks are unique
+            if (pick1Id == pick2Id || pick1Id == pick3Id || pick2Id == pick3Id)
+            {
+                ModelState.AddModelError(string.Empty, "All picks must be unique.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            // Check for existing pick
             var existingPick = await _context.Picks
                 .FirstOrDefaultAsync(p => p.RaceId == raceId && p.UserId == userId);
 
             if (existingPick != null)
             {
-                ModelState.AddModelError(string.Empty, "Picks for this user and race already exist.");
-                await OnGetAsync();
-                return Page();
+                existingPick.Pick1Id = pick1Id;
+                existingPick.Pick2Id = pick2Id;
+                existingPick.Pick3Id = pick3Id;
+                _context.Picks.Update(existingPick);
+            }
+            else
+            {
+                var pick = new Pick
+                {
+                    RaceId = raceId,
+                    UserId = userId,
+                    Pick1Id = pick1Id,
+                    Pick2Id = pick2Id,
+                    Pick3Id = pick3Id
+                };
+                _context.Picks.Add(pick);
             }
 
-            var pick = new Pick
-            {
-                RaceId = raceId,
-                UserId = userId,
-                Pick1Id = pick1Id,
-                Pick2Id = pick2Id,
-                Pick3Id = pick3Id
-            };
-
-            _context.Picks.Add(pick);
             await _context.SaveChangesAsync();
 
             return RedirectToPage();
