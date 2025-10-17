@@ -196,6 +196,7 @@
             <th>Pool</th>
             <th style="width: 220px;"></th>
             <th>Enter Picks</th>
+            <th>Edit All Picks</th> <!-- Add this column header -->
         </tr>
     </thead>
     <tbody>
@@ -239,6 +240,13 @@
                         data-race-name="@race.Name">
                     Enter Picks
                 </button>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-secondary"
+                   asp-page="Picks"
+                   asp-route-raceId="@race.Id">
+                    Edit All Picks
+                </a>
             </td>
         </tr>
     }

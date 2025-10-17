@@ -1,0 +1,78 @@
+@page "{raceId:int}"
+@model WebApp.Pages.Races.PicksModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Edit Picks";
+}
+<h1>Edit Picks for @Model.Race?.Name (@Model.Race?.Date.ToShortDateString())</h1>
+
+<form method="post">
+    <input type="hidden" name="RaceId" value="@Model.RaceId" />
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>User</th>
+                <th>Pick 1</th>
+                <th>Pick 2</th>
+                <th>Pick 3</th>
+            </tr>
+        </thead>
+        <tbody>
+        @for (int i = 0; i < Model.Users.Count; i++)
+        {
+            var user = Model.Users[i];
+            var pick = Model.UserPicks.ContainsKey(user.Id) ? Model.UserPicks[user.Id] : null;
+            <tr>
+                <td>
+                    @user.UserName
+                    <input type="hidden" name="UserIds" value="@user.Id" />
+                </td>
+                <td>
+                    <select class="form-select" name="Pick1Ids">
+                        <option value="">Select</option>
+                        @foreach (var driver in Model.Drivers)
+                        {
+                            var selected = pick?.Pick1Id == driver.Id ? "selected" : "";
+                            <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">@driver.Name (@driver.CarNumber)
+                            </option>
+                        }
+                    </select>
+                </td>
+                <td>
+                    <select class="form-select" name="Pick2Ids">
+                        <option value="">Select</option>
+                        @foreach (var driver in Model.Drivers)
+                        {
+                            var selected = pick?.Pick2Id == driver.Id ? "selected" : "";
+                            <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">@driver.Name (@driver.CarNumber)
+                            </option>
+                        }
+                    </select>
+                </td>
+                <td>
+                    <select class="form-select" name="Pick3Ids">
+                        <option value="">Select</option>
+                        @foreach (var driver in Model.Drivers)
+                        {
+                            var selected = pick?.Pick3Id == driver.Id ? "selected" : "";
+                            <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">@driver.Name (@driver.CarNumber)
+                            </option>
+                        }
+                    </select>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-success">Save All Picks</button>
+</form>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="text-danger">
+        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        {
+            <div>@error.ErrorMessage</div>
+        }
+    </div>
+}
