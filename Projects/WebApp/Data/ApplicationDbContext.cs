@@ -16,6 +16,7 @@ namespace WebApp.Data
         public DbSet<Race> Races { get; set; }
         public DbSet<Driver> Drivers { get; set; }
         public DbSet<Pick> Picks { get; set; }
+        public DbSet<RaceResult> RaceResults { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

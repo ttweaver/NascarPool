@@ -1,3 +1,7 @@
+using System.Collections.Generic;
+using System.Linq;
+using WebApp.Data;
+
 namespace WebApp.Models;
 
 public class Pick
@@ -15,4 +19,28 @@ public class Pick
     public Driver Pick2 { get; set; } = default!;
     public Driver Pick3 { get; set; } = default!;
     public int Points { get; set; }
+
+    public ICollection<RaceResult> RaceResults { get; set; } = new List<RaceResult>();
+
+    /// <summary>
+    /// Calculates the total points for this pick for the race.
+    /// Uses Pick1Id as the primary driver for scoring.
+    /// Saves the updated points to the database.
+    /// </summary>
+    public void CalculateTotalPoints(ApplicationDbContext context)
+    {
+        var driverIds = new[] { Pick1Id, Pick2Id, Pick3Id };
+        // Get all race results for the selected drivers in this race
+        var results = RaceResults
+            .Where(r => r.RaceId == RaceId && driverIds.Contains(r.DriverId))
+            .ToList();
+
+        // Use Pick1Id as the primary driver for scoring
+        int total = results.Sum(r => r.CalculateScore(Pick1Id));
+        this.Points = total;
+
+        // Save changes to the database
+        context.Picks.Update(this);
+        context.SaveChanges();
+    }
 }
