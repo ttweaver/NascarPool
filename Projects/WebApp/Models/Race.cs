@@ -6,6 +6,7 @@ public class Race
     public string Name { get; set; }
     public DateTime Date { get; set; }
     public ICollection<Pick> Picks { get; set; }
-    public int PoolId { get; set; }
+    public ICollection<RaceResult> Results { get; set; }
+	public int PoolId { get; set; }
     public Pool Pool { get; set; }
 }

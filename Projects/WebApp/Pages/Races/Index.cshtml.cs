@@ -17,17 +17,13 @@ namespace WebApp.Pages.Races
 
         public IList<Race> Races { get; set; } = default!;
         public IList<Pool> Pools { get; set; } = default!;
-        public IList<User> Users { get; set; } = default!;
-        public IList<Driver> Drivers { get; set; } = default!; // Assuming picks are drivers
-        public IList<Pick> Picks { get; set; } = new List<Pick>();
 
         public async Task OnGetAsync()
         {
-            Races = await _context.Races.Include(r => r.Pool).ToListAsync();
+            Races = await _context.Races
+                .Include(r => r.Pool)
+                .ToListAsync();
             Pools = await _context.Pools.ToListAsync();
-            Users = await _context.Users.ToListAsync();      // Add this
-            Drivers = await _context.Drivers.ToListAsync();  // Add this (or whatever entity is used for picks)
-            Picks = await _context.Picks.ToListAsync();
         }
 
         // CREATE
@@ -154,63 +150,6 @@ namespace WebApp.Pages.Races
                 _context.Races.Remove(race);
                 await _context.SaveChangesAsync();
             }
-            return RedirectToPage();
-        }
-
-        // ENTER PICKS
-        public async Task<IActionResult> OnPostEnterPicksAsync()
-        {
-            var raceIdStr = Request.Form["EnterPicksRaceId"];
-            var userIdStr = Request.Form["EnterPicksUser"];
-            var pick1IdStr = Request.Form["EnterPick1"];
-            var pick2IdStr = Request.Form["EnterPick2"];
-            var pick3IdStr = Request.Form["EnterPick3"];
-
-            if (!int.TryParse(raceIdStr, out var raceId) ||
-                !int.TryParse(userIdStr, out var userId) ||
-                !int.TryParse(pick1IdStr, out var pick1Id) ||
-                !int.TryParse(pick2IdStr, out var pick2Id) ||
-                !int.TryParse(pick3IdStr, out var pick3Id))
-            {
-                ModelState.AddModelError(string.Empty, "All fields are required.");
-                await OnGetAsync();
-                return Page();
-            }
-
-            // Ensure picks are unique
-            if (pick1Id == pick2Id || pick1Id == pick3Id || pick2Id == pick3Id)
-            {
-                ModelState.AddModelError(string.Empty, "All picks must be unique.");
-                await OnGetAsync();
-                return Page();
-            }
-
-            // Check for existing pick
-            var existingPick = await _context.Picks
-                .FirstOrDefaultAsync(p => p.RaceId == raceId && p.UserId == userId);
-
-            if (existingPick != null)
-            {
-                existingPick.Pick1Id = pick1Id;
-                existingPick.Pick2Id = pick2Id;
-                existingPick.Pick3Id = pick3Id;
-                _context.Picks.Update(existingPick);
-            }
-            else
-            {
-                var pick = new Pick
-                {
-                    RaceId = raceId,
-                    UserId = userId,
-                    Pick1Id = pick1Id,
-                    Pick2Id = pick2Id,
-                    Pick3Id = pick3Id
-                };
-                _context.Picks.Add(pick);
-            }
-
-            await _context.SaveChangesAsync();
-
             return RedirectToPage();
         }
     }

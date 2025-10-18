@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
 using WebApp.Models;
+using WebApp.Helpers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,7 +24,7 @@ namespace WebApp.Pages.Races
 
         public async Task<IActionResult> OnGetAsync()
         {
-            Race = await _context.Races.Include(r => r.Pool).FirstOrDefaultAsync(r => r.Id == RaceId);
+            Race = await _context.Races.Include(r => r.Pool.Members).FirstOrDefaultAsync(r => r.Id == RaceId);
             if (Race == null) return NotFound();
 
             // Get users in the current pool
@@ -112,6 +113,12 @@ namespace WebApp.Pages.Races
             }
 
             await _context.SaveChangesAsync();
+            return RedirectToPage(new { raceId = RaceId });
+        }
+
+        public async Task<IActionResult> OnPostCalculatePointsAsync()
+        {
+            await Helpers.PickPointsCalculator.CalculateAllPicksPointsAsync(_context, RaceId);
             return RedirectToPage(new { raceId = RaceId });
         }
     }

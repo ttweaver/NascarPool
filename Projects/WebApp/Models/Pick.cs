@@ -20,14 +20,12 @@ public class Pick
     public Driver Pick3 { get; set; } = default!;
     public int Points { get; set; }
 
-    public ICollection<RaceResult> RaceResults { get; set; } = new List<RaceResult>();
-
     /// <summary>
     /// Calculates the total points for this pick for the race.
     /// Uses Pick1Id as the primary driver for scoring.
     /// Saves the updated points to the database.
     /// </summary>
-    public void CalculateTotalPoints(ApplicationDbContext context)
+    public void CalculateTotalPoints(ApplicationDbContext context, ICollection<RaceResult> RaceResults)
     {
         var driverIds = new[] { Pick1Id, Pick2Id, Pick3Id };
         // Get all race results for the selected drivers in this race

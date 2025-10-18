@@ -1,0 +1,49 @@
+@page "{raceId:int}"
+@model WebApp.Pages.Races.ResultsModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    ViewData["Title"] = "Enter Race Results";
+}
+<h1>Enter Results for @Model.Race?.Name (@Model.Race?.Date.ToShortDateString())</h1>
+
+<form method="post">
+    <input type="hidden" name="RaceId" value="@Model.RaceId" />
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Driver</th>
+                <th>Car #</th>
+                <th>Place</th>
+            </tr>
+        </thead>
+        <tbody>
+        @for (int i = 0; i < Model.Drivers.Count; i++)
+        {
+            var driver = Model.Drivers[i];
+            var result = Model.DriverResults.ContainsKey(driver.Id) ? Model.DriverResults[driver.Id] : null;
+            <tr>
+                <td>
+                    @driver.Name
+                    <input type="hidden" name="DriverIds" value="@driver.Id" />
+                </td>
+                <td>@driver.CarNumber</td>
+                <td>
+                    <input type="number" class="form-control" name="Places" min="1" max="@Model.Drivers.Count"
+                           value="@(result?.Place ?? 0)" required />
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+    <button type="submit" class="btn btn-success">Save Results</button>
+</form>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="text-danger">
+        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        {
+            <div>@error.ErrorMessage</div>
+        }
+    </div>
+}

@@ -1,0 +1,27 @@
+@page "{raceId:int}"
+@model WebApp.Pages.Races.ViewResultsModel
+@{
+    ViewData["Title"] = "Race Results";
+}
+<h1>Results for @Model.Race?.Name (@Model.Race?.Date.ToShortDateString())</h1>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Place</th>
+            <th>User</th>
+            <th>Total Points</th>
+        </tr>
+    </thead>
+    <tbody>
+    @for (int i = 0; i < Model.RankedResults.Count; i++)
+    {
+        var result = Model.RankedResults[i];
+        <tr>
+            <td>@(i + 1)</td>
+            <td>@result.UserName</td>
+            <td>@result.Points</td>
+        </tr>
+    }
+    </tbody>
+</table>

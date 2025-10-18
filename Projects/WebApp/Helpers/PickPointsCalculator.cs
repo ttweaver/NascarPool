@@ -3,6 +3,7 @@ using WebApp.Models;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace WebApp.Helpers
 {
@@ -15,13 +16,13 @@ namespace WebApp.Helpers
         {
             // Get all picks for the race
             var picks = await context.Picks
-                .Include(p => p.RaceResults)
+                .Include(p => p.Race.Results)
                 .Where(p => p.RaceId == raceId)
                 .ToListAsync();
 
             foreach (var pick in picks)
             {
-                pick.CalculateTotalPoints(context);
+                pick.CalculateTotalPoints(context, pick.Race.Results);
             }
 
             return picks;

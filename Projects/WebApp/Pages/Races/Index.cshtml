@@ -126,77 +126,16 @@
     </div>
 </div>
 
-<!-- Enter Picks Modal -->
-<div class="modal fade" id="enterPicksModal" tabindex="-1" aria-labelledby="enterPicksModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form method="post" asp-page-handler="EnterPicks">
-                <input type="hidden" id="EnterPicksRaceId" name="EnterPicksRaceId" />
-                <div class="modal-header">
-                    <h5 class="modal-title" id="enterPicksModalLabel">Enter Picks for <span id="EnterPicksRaceName"></span></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div asp-validation-summary="All" class="text-danger mb-2"></div>
-                    <div class="mb-3">
-                        <label for="EnterPicksUser" class="form-label">User</label>
-                        <select class="form-select" id="EnterPicksUser" name="EnterPicksUser" required>
-                            <option value="">Select User</option>
-                            @foreach (var user in Model.Users)
-                            {
-                                <option value="@user.Id">@user.UserName</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="EnterPick1" class="form-label">Pick 1</label>
-                        <select class="form-select" id="EnterPick1" name="EnterPick1" required>
-                            <option value="">Select Pick</option>
-                            @foreach (var driver in Model.Drivers)
-                            {
-                                <option value="@driver.Id">@driver.Name</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="EnterPick2" class="form-label">Pick 2</label>
-                        <select class="form-select" id="EnterPick2" name="EnterPick2" required>
-                            <option value="">Select Pick</option>
-                            @foreach (var driver in Model.Drivers)
-                            {
-                                <option value="@driver.Id">@driver.Name</option>
-                            }
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="EnterPick3" class="form-label">Pick 3</label>
-                        <select class="form-select" id="EnterPick3" name="EnterPick3" required>
-                            <option value="">Select Pick</option>
-                            @foreach (var driver in Model.Drivers)
-                            {
-                                <option value="@driver.Id">@driver.Name</option>
-                            }
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-success">Save Picks</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
 <table class="table table-striped table-bordered align-middle">
     <thead class="table-light">
         <tr>
             <th>Name</th>
             <th>Date</th>
             <th>Pool</th>
-            <th style="width: 220px;"></th>
-            <th>Enter Picks</th>
-            <th>Edit All Picks</th> <!-- Add this column header -->
+            <th>Actions</th>
+            <th>Edit All Picks</th>
+            <th>Enter Results</th>
+            <th>View Results</th> <!-- New column header -->
         </tr>
     </thead>
     <tbody>
@@ -233,19 +172,24 @@
                 </button>
             </td>
             <td>
-                <button type="button" class="btn btn-sm btn-success"
-                        data-bs-toggle="modal"
-                        data-bs-target="#enterPicksModal"
-                        data-race-id="@race.Id"
-                        data-race-name="@race.Name">
-                    Enter Picks
-                </button>
-            </td>
-            <td>
                 <a class="btn btn-sm btn-secondary"
                    asp-page="Picks"
                    asp-route-raceId="@race.Id">
                     Edit All Picks
+                </a>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-info"
+                   asp-page="Results"
+                   asp-route-raceId="@race.Id">
+                    Enter Results
+                </a>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-success"
+                   asp-page="ViewResults"
+                   asp-route-raceId="@race.Id">
+                    View Results
                 </a>
             </td>
         </tr>
@@ -257,21 +201,6 @@
 {
     <span id="showCreateModal"></span>
 }
-
-@{
-    var picksJson = System.Text.Json.JsonSerializer.Serialize(
-        Model.Picks.Select(p => new {
-            userId = p.UserId,
-            raceId = p.RaceId,
-            pick1Id = p.Pick1Id,
-            pick2Id = p.Pick2Id,
-            pick3Id = p.Pick3Id
-        })
-    );
-}
-<script>
-    var existingPicks = @Html.Raw(picksJson);
-</script>
 
 @section Scripts {
 <script>
@@ -300,34 +229,6 @@
         document.getElementById('DetailsRaceName').textContent = button.getAttribute('data-race-name');
         document.getElementById('DetailsRaceDate').textContent = button.getAttribute('data-race-date');
         document.getElementById('DetailsRacePool').textContent = button.getAttribute('data-race-pool');
-    });
-
-    // Enter Picks modal population
-    var enterPicksModal = document.getElementById('enterPicksModal');
-    enterPicksModal.addEventListener('show.bs.modal', function (event) {
-        var button = event.relatedTarget;
-        document.getElementById('EnterPicksRaceId').value = button.getAttribute('data-race-id');
-        document.getElementById('EnterPicksRaceName').textContent = button.getAttribute('data-race-name');
-    });
-
-    document.getElementById('EnterPicksUser').addEventListener('change', function () {
-        var userId = this.value;
-        var raceId = document.getElementById('EnterPicksRaceId').value;
-
-        // Find the pick for this user and race
-        var pick = existingPicks.find(function (p) {
-            return p.userId == userId && p.raceId == raceId;
-        });
-
-        if (pick) {
-            document.getElementById('EnterPick1').value = pick.pick1Id;
-            document.getElementById('EnterPick2').value = pick.pick2Id;
-            document.getElementById('EnterPick3').value = pick.pick3Id;
-        } else {
-            document.getElementById('EnterPick1').value = "";
-            document.getElementById('EnterPick2').value = "";
-            document.getElementById('EnterPick3').value = "";
-        }
     });
 
     window.addEventListener('DOMContentLoaded', function () {

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WebApp.Data;
 
@@ -11,9 +12,11 @@ using WebApp.Data;
 namespace WebApp.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251017040049_AddReaceResults")]
+    partial class AddReaceResults
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -362,6 +365,9 @@ namespace WebApp.Data.Migrations
                     b.Property<int>("DriverId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("PickId")
+                        .HasColumnType("int");
+
                     b.Property<int>("Place")
                         .HasColumnType("int");
 
@@ -371,6 +377,8 @@ namespace WebApp.Data.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("DriverId");
+
+                    b.HasIndex("PickId");
 
                     b.HasIndex("RaceId");
 
@@ -537,8 +545,12 @@ namespace WebApp.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("WebApp.Models.Pick", null)
+                        .WithMany("RaceResults")
+                        .HasForeignKey("PickId");
+
                     b.HasOne("WebApp.Models.Race", "Race")
-                        .WithMany("Results")
+                        .WithMany()
                         .HasForeignKey("RaceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -546,6 +558,11 @@ namespace WebApp.Data.Migrations
                     b.Navigation("Driver");
 
                     b.Navigation("Race");
+                });
+
+            modelBuilder.Entity("WebApp.Models.Pick", b =>
+                {
+                    b.Navigation("RaceResults");
                 });
 
             modelBuilder.Entity("WebApp.Models.Pool", b =>
@@ -558,8 +575,6 @@ namespace WebApp.Data.Migrations
             modelBuilder.Entity("WebApp.Models.Race", b =>
                 {
                     b.Navigation("Picks");
-
-                    b.Navigation("Results");
                 });
 
             modelBuilder.Entity("WebApp.Models.User", b =>
