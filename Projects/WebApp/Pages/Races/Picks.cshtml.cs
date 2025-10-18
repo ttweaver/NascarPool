@@ -50,10 +50,9 @@ namespace WebApp.Pages.Races
 
         public async Task<IActionResult> OnPostAsync()
         {
-            Race = await _context.Races.Include(r => r.Pool).FirstOrDefaultAsync(r => r.Id == RaceId);
+            Race = await _context.Races.Include(r => r.Pool.Members).FirstOrDefaultAsync(r => r.Id == RaceId);
             if (Race == null) return NotFound();
 
-            // Get users in the current pool
             var memberIds = Race.Pool.Members.Select(m => m.Id).ToList();
             Users = await _context.Users
                 .Where(u => memberIds.Contains(u.Id))
@@ -82,6 +81,14 @@ namespace WebApp.Pages.Races
                     continue;
                 }
 
+                // Check for duplicate picks
+                var picksSet = new HashSet<int> { pick1Id, pick2Id, pick3Id };
+                if (picksSet.Count < 3)
+                {
+                    ModelState.AddModelError(string.Empty, $"Duplicate picks detected for user {Users.FirstOrDefault(u => u.Id == userId)?.UserName}.");
+                    continue;
+                }
+
                 var existingPick = await _context.Picks.FirstOrDefaultAsync(p => p.RaceId == RaceId && p.UserId == userId);
                 if (existingPick != null)
                 {
@@ -106,19 +113,12 @@ namespace WebApp.Pages.Races
 
             if (!ModelState.IsValid)
             {
-                // Reload for redisplay
                 var picks = await _context.Picks.Where(p => p.RaceId == RaceId).ToListAsync();
                 UserPicks = picks.ToDictionary(p => p.UserId, p => p);
                 return Page();
             }
 
             await _context.SaveChangesAsync();
-            return RedirectToPage(new { raceId = RaceId });
-        }
-
-        public async Task<IActionResult> OnPostCalculatePointsAsync()
-        {
-            await Helpers.PickPointsCalculator.CalculateAllPicksPointsAsync(_context, RaceId);
             return RedirectToPage(new { raceId = RaceId });
         }
     }

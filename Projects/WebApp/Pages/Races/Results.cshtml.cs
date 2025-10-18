@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
 using WebApp.Models;
+using WebApp.Helpers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -52,6 +53,7 @@ namespace WebApp.Pages.Races
             var driverIds = Request.Form["DriverIds"].ToArray();
             var places = Request.Form["Places"].ToArray();
 
+            // Save or update race results
             for (int i = 0; i < driverIds.Length; i++)
             {
                 if (!int.TryParse(driverIds[i], out var driverId)) continue;
@@ -87,6 +89,23 @@ namespace WebApp.Pages.Races
             }
 
             await _context.SaveChangesAsync();
+
+            // After saving results, update points for all picks related to this race
+            var raceResults = await _context.RaceResults.Where(r => r.RaceId == RaceId).ToListAsync();
+            var picks = await _context.Picks.Where(p => p.RaceId == RaceId).ToListAsync();
+            foreach (var pick in picks)
+            {
+                pick.CalculateTotalPoints(_context, raceResults);
+                _context.Picks.Update(pick);
+            }
+            await _context.SaveChangesAsync();
+
+            return RedirectToPage(new { raceId = RaceId });
+        }
+
+        public async Task<IActionResult> OnPostCalculatePointsAsync()
+        {
+            await PickPointsCalculator.CalculateAllPicksPointsAsync(_context, RaceId);
             return RedirectToPage(new { raceId = RaceId });
         }
     }

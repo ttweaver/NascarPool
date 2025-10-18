@@ -67,11 +67,6 @@
     <button type="submit" class="btn btn-success">Save All Picks</button>
 </form>
 
-<form method="post" asp-page-handler="CalculatePoints">
-    <input type="hidden" name="RaceId" value="@Model.RaceId" />
-    <button type="submit" class="btn btn-primary mt-3">Calculate All Picks Points</button>
-</form>
-
 @if (!ViewData.ModelState.IsValid)
 {
     <div class="text-danger">
