@@ -6,8 +6,19 @@
 }
 <h1>Enter Results for @Model.Race?.Name (@Model.Race?.Date.ToShortDateString())</h1>
 
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="text-danger mb-3">
+        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+        {
+            <div>@error.ErrorMessage</div>
+        }
+    </div>
+}
+
 <form method="post">
     <input type="hidden" name="RaceId" value="@Model.RaceId" />
+    <button type="submit" class="btn btn-success mb-3">Save Results</button>
     <table class="table table-bordered">
         <thead>
             <tr>
@@ -28,7 +39,8 @@
                 </td>
                 <td>@driver.CarNumber</td>
                 <td>
-                    <input type="number" class="form-control" name="Places" min="1" max="@Model.Drivers.Count"
+                    <input type="number" class="form-control form-control-sm" style="width: 70px; display: inline-block;"
+                           name="Places" min="1" max="@Model.Drivers.Count"
                            value="@(result?.Place ?? 0)" required />
                 </td>
             </tr>
@@ -37,13 +49,3 @@
     </table>
     <button type="submit" class="btn btn-success">Save Results</button>
 </form>
-
-@if (!ViewData.ModelState.IsValid)
-{
-    <div class="text-danger">
-        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-        {
-            <div>@error.ErrorMessage</div>
-        }
-    </div>
-}

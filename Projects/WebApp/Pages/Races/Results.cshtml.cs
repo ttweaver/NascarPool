@@ -53,31 +53,54 @@ namespace WebApp.Pages.Races
             var driverIds = Request.Form["DriverIds"].ToArray();
             var places = Request.Form["Places"].ToArray();
 
-            // Save or update race results
-            for (int i = 0; i < driverIds.Length; i++)
+            // Check for duplicate places and collect driver names for duplicates
+            var placeToDriverIds = new Dictionary<int, List<int>>();
+            for (int i = 0; i < places.Length; i++)
             {
-                if (!int.TryParse(driverIds[i], out var driverId)) continue;
-                if (!int.TryParse(places[i], out var place) || place < 1)
+                if (int.TryParse(places[i], out var place) && place > 0)
                 {
-                    ModelState.AddModelError(string.Empty, $"Invalid place for driver {Drivers.FirstOrDefault(d => d.Id == driverId)?.Name}.");
-                    continue;
+                    if (!placeToDriverIds.ContainsKey(place))
+                        placeToDriverIds[place] = new List<int>();
+                    if (int.TryParse(driverIds[i], out var driverId))
+                        placeToDriverIds[place].Add(driverId);
                 }
+            }
+            foreach (var kvp in placeToDriverIds.Where(p => p.Value.Count > 1))
+            {
+                var driverNames = kvp.Value
+                    .Select(id => Drivers.FirstOrDefault(d => d.Id == id)?.Name ?? $"DriverId {id}")
+                    .ToList();
+                ModelState.AddModelError(string.Empty, $"Duplicate place '{kvp.Key}' assigned to: {string.Join(", ", driverNames)}.");
+            }
 
-                var existingResult = await _context.RaceResults.FirstOrDefaultAsync(r => r.RaceId == RaceId && r.DriverId == driverId);
-                if (existingResult != null)
+            // Save or update race results only if no duplicate places
+            if (ModelState.IsValid)
+            {
+                for (int i = 0; i < driverIds.Length; i++)
                 {
-                    existingResult.Place = place;
-                    _context.RaceResults.Update(existingResult);
-                }
-                else
-                {
-                    var result = new RaceResult
+                    if (!int.TryParse(driverIds[i], out var driverId)) continue;
+                    if (!int.TryParse(places[i], out var place) || place < 1)
                     {
-                        RaceId = RaceId,
-                        DriverId = driverId,
-                        Place = place
-                    };
-                    _context.RaceResults.Add(result);
+                        ModelState.AddModelError(string.Empty, $"Invalid place for driver {Drivers.FirstOrDefault(d => d.Id == driverId)?.Name}.");
+                        continue;
+                    }
+
+                    var existingResult = await _context.RaceResults.FirstOrDefaultAsync(r => r.RaceId == RaceId && r.DriverId == driverId);
+                    if (existingResult != null)
+                    {
+                        existingResult.Place = place;
+                        _context.RaceResults.Update(existingResult);
+                    }
+                    else
+                    {
+                        var result = new RaceResult
+                        {
+                            RaceId = RaceId,
+                            DriverId = driverId,
+                            Place = place
+                        };
+                        _context.RaceResults.Add(result);
+                    }
                 }
             }
 
