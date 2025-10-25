@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,13 @@ namespace WebApp.Pages
     public class DashboardModel : PageModel
     {
         private readonly ApplicationDbContext _context;
-        public DashboardModel(ApplicationDbContext context) => _context = context;
+        private readonly UserManager<ApplicationUser> _userManager;
+
+        public DashboardModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        {
+            _context = context;
+            _userManager = userManager;
+        }
 
         public string UserId { get; set; }
         public int OverallPlace { get; set; }
@@ -24,8 +31,7 @@ namespace WebApp.Pages
 
         public async Task OnGetAsync()
         {
-            // Example: get current user id (replace with your auth logic)
-            UserId = "";
+            UserId = _userManager.GetUserId(User);
 
             var standings = await _context.Picks
                 .GroupBy(p => p.UserId)
