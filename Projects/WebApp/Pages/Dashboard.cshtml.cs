@@ -25,6 +25,7 @@ namespace WebApp.Pages
 
         public string UserId { get; set; }
         public int OverallPlace { get; set; }
+        public int TotalPoints { get; set; }
         public List<RaceResult> RecentResults { get; set; } = new();
         public Pick? CurrentWeekPick { get; set; }
         public Race? CurrentRace { get; set; }
@@ -33,15 +34,36 @@ namespace WebApp.Pages
         {
             UserId = _userManager.GetUserId(User);
 
+            // Get current season (assumes a Season entity and a way to determine current season)
+            var currentSeason = _context.Pools.AsEnumerable<Pool>()
+                .OrderByDescending(s => s.CurrentYear)
+                .FirstOrDefault();
+
+            if (currentSeason == null)
+            {
+                OverallPlace = 0;
+                TotalPoints = 0;
+                return;
+            }
+
+            // Only get picks for the current season
+            var seasonRaceIds = await _context.Races
+                .Where(r => r.Pool.Id == currentSeason.Id)
+                .Select(r => r.Id)
+                .ToListAsync();
+
             var standings = await _context.Picks
+                .Where(p => seasonRaceIds.Contains(p.RaceId))
                 .GroupBy(p => p.UserId)
                 .Select(g => new { UserId = g.Key, TotalPoints = g.Sum(p => p.Points) })
                 .OrderBy(s => s.TotalPoints)
                 .ToListAsync();
 
             OverallPlace = standings.FindIndex(s => s.UserId == UserId) + 1;
+            TotalPoints = standings.FirstOrDefault(s => s.UserId == UserId)?.TotalPoints ?? 0;
 
             var recentRace = await _context.Races
+                .Where(r => r.Pool.Id == currentSeason.Id)
                 .OrderByDescending(r => r.Date)
                 .FirstOrDefaultAsync();
 
@@ -55,7 +77,7 @@ namespace WebApp.Pages
             }
 
             CurrentRace = await _context.Races
-                .Where(r => r.Date >= DateTime.Today)
+                .Where(r => r.Pool.Id == currentSeason.Id && r.Date >= DateTime.Today)
                 .OrderBy(r => r.Date)
                 .FirstOrDefaultAsync();
 

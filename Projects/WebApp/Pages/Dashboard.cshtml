@@ -11,40 +11,30 @@
         <div class="card text-center shadow-sm">
             <div class="card-body">
                 <h5 class="card-title">Your Overall Place</h5>
-                <div class="display-4 fw-bold text-primary">@Model.OverallPlace</div>
+                @if (Model.RecentResults == null || !Model.RecentResults.Any())
+                {
+                    <div class="text-secondary">There are no standings available yet for this season.</div>
+                }
+                else
+                {
+                    <div class="display-4 fw-bold text-primary">@Model.OverallPlace</div>
+                }
             </div>
         </div>
     </div>
 
-    <!-- Most Recent Race Results Tile -->
+    <!-- Total Points Tile -->
     <div class="col-md-4 mb-3">
-        <div class="card shadow-sm">
+        <div class="card text-center shadow-sm">
             <div class="card-body">
-                <h5 class="card-title">Most Recent Race Results</h5>
-                <div class="mb-2 text-muted">@Model.RecentResults.FirstOrDefault()?.Race?.Name ?? "N/A"</div>
-                @if (Model.RecentResults.Any())
+                <h5 class="card-title">Total Points</h5>
+                @if (Model.TotalPoints == null)
                 {
-                    <table class="table table-sm table-bordered mb-0">
-                        <thead>
-                            <tr>
-                                <th>Place</th>
-                                <th>Driver</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var result in Model.RecentResults)
-                        {
-                            <tr>
-                                <td>@result.Place</td>
-                                <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
+                    <div class="text-secondary">No points available yet for this season.</div>
                 }
                 else
                 {
-                    <div class="text-secondary">No recent results available.</div>
+                    <div class="display-4 fw-bold text-success">@Model.TotalPoints</div>
                 }
             </div>
         </div>
@@ -54,8 +44,10 @@
     <div class="col-md-4 mb-3">
         <div class="card shadow-sm">
             <div class="card-body">
-                <h5 class="card-title">Your Picks for This Week</h5>
-                <div class="mb-2 text-muted">@Model.CurrentRace?.Name ?? "N/A"</div>
+                <h5 class="card-title">Picks for This Week</h5>
+                <div class="mb-2 text-muted">
+                    @(Model.CurrentRace != null && !string.IsNullOrWhiteSpace(Model.CurrentRace.Name) ? Model.CurrentRace.Name : "N/A")
+                </div>
                 @if (Model.CurrentWeekPick != null)
                 {
                     <ul class="list-group list-group-flush">
@@ -72,3 +64,145 @@
         </div>
     </div>
 </div>
+
+<!-- Most Recent Race Results Tile in its own row, full width -->
+<div class="row mb-4">
+    <div class="col-12 mb-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Most Recent Race Results</h5>
+                @if (Model.RecentResults != null && Model.RecentResults.Any() && Model.RecentResults.FirstOrDefault()?.Race?.Name != null)
+                {
+                    <div class="mb-2 text-muted">
+                        @Model.RecentResults.FirstOrDefault().Race.Name
+                    </div>
+                }
+
+                <!-- Search by driver (client-side, instant) -->
+                <div class="mb-3">
+                    <div class="input-group">
+                        <input type="text" id="searchDriver" class="form-control" placeholder="Search by driver name" oninput="filterResultsAndPaginate()" />
+                    </div>
+                </div>
+
+                <table class="table table-sm table-bordered mb-0" id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>Place</th>
+                            <th>Driver</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody">
+                    @if (Model.RecentResults != null && Model.RecentResults.Any())
+                    {
+                        foreach (var result in Model.RecentResults)
+                        {
+                            <tr>
+                                <td>@result.Place</td>
+                                <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="2" class="text-secondary">No recent results available.</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+
+                <!-- Pagination controls -->
+                <nav>
+                    <ul class="pagination justify-content-center" id="pagination">
+                        <!-- Pagination buttons will be rendered here by JS -->
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const pageSize = 10;
+let currentPage = 1;
+let allRows = [];
+let filteredRows = [];
+
+function filterResultsAndPaginate() {
+    const input = document.getElementById('searchDriver');
+    const filter = input.value.trim().toLowerCase();
+
+    // If search is empty, show all rows
+    if (!filter) {
+        filteredRows = allRows;
+    } else {
+        filteredRows = allRows.filter(row => {
+            const driverCell = row.getElementsByTagName('td')[1];
+            if (!driverCell) return false;
+            const txtValue = driverCell.textContent || driverCell.innerText;
+            return txtValue.toLowerCase().indexOf(filter) > -1;
+        });
+    }
+    currentPage = 1;
+    renderPage();
+}
+
+function renderPage() {
+    const tbody = document.getElementById('resultsBody');
+    allRows.forEach(row => row.style.display = 'none');
+
+    const rowsToShow = filteredRows;
+    const totalRows = rowsToShow.length;
+    const totalPages = Math.ceil(totalRows / pageSize);
+
+    if (totalRows === 0) {
+        const noResultsRow = document.createElement('tr');
+        noResultsRow.innerHTML = '<td colspan="2" class="text-secondary">No recent results available.</td>';
+        tbody.innerHTML = '';
+        tbody.appendChild(noResultsRow);
+        document.getElementById('pagination').innerHTML = '';
+        return;
+    }
+
+    tbody.innerHTML = '';
+    for (let i = (currentPage - 1) * pageSize; i < Math.min(currentPage * pageSize, totalRows); i++) {
+        tbody.appendChild(rowsToShow[i]);
+        rowsToShow[i].style.display = '';
+    }
+
+    renderPagination(totalPages);
+}
+
+function renderPagination(totalPages) {
+    const pagination = document.getElementById('pagination');
+    pagination.innerHTML = '';
+
+    if (totalPages <= 1) return;
+
+    for (let i = 1; i <= totalPages; i++) {
+        const li = document.createElement('li');
+        li.className = 'page-item' + (i === currentPage ? ' active' : '');
+        const a = document.createElement('a');
+        a.className = 'page-link';
+        a.href = '#';
+        a.textContent = i;
+        a.onclick = function(e) {
+            e.preventDefault();
+            currentPage = i;
+            renderPage();
+        };
+        li.appendChild(a);
+        pagination.appendChild(li);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    allRows = Array.from(document.querySelectorAll('#resultsTable tbody tr'));
+    filteredRows = allRows;
+    renderPage();
+    document.getElementById('searchDriver').addEventListener('input', filterResultsAndPaginate);
+});
+</script>
+}
