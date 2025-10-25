@@ -1,0 +1,33 @@
+@page
+@model WebApp.Pages.Standings.IndexModel
+@{
+    ViewData["Title"] = "Season Standings";
+}
+<h1>Season Standings</h1>
+
+@if (Model.Standings == null || !Model.Standings.Any())
+{
+    <div class="alert alert-info">No standings available for the current season.</div>
+}
+else
+{
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Place</th>
+                <th>User</th>
+                <th>Total Points</th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var entry in Model.Standings)
+        {
+            <tr>
+                <td>@entry.Place</td>
+                <td>@entry.UserName</td>
+                <td>@entry.TotalPoints</td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}

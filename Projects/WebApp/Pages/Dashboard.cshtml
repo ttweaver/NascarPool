@@ -6,38 +6,42 @@
 <h1>Dashboard</h1>
 
 <div class="row mb-4">
-    <!-- Overall Place Tile -->
+    <!-- Overall Place Tile (clickable, with tooltip) -->
     <div class="col-md-4 mb-3">
-        <div class="card text-center shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Your Overall Place</h5>
-                @if (Model.RecentResults == null || !Model.RecentResults.Any())
-                {
-                    <div class="text-secondary">There are no standings available yet for this season.</div>
-                }
-                else
-                {
-                    <div class="display-4 fw-bold text-primary">@Model.OverallPlace</div>
-                }
+        <a href="/Standings" class="text-decoration-none" title="Click here to see how you stack up!">
+            <div class="card text-center shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Your Overall Place</h5>
+                    @if (!Model.HasPicks)
+                    {
+                        <div class="text-secondary">There are no standings available yet for this season.</div>
+                    }
+                    else
+                    {
+                        <div class="display-4 fw-bold text-primary">@Model.OverallPlace</div>
+                    }
+                </div>
             </div>
-        </div>
+        </a>
     </div>
 
-    <!-- Total Points Tile -->
+    <!-- Total Points Tile (clickable, with tooltip) -->
     <div class="col-md-4 mb-3">
-        <div class="card text-center shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Total Points</h5>
-                @if (Model.TotalPoints == null)
-                {
-                    <div class="text-secondary">No points available yet for this season.</div>
-                }
-                else
-                {
-                    <div class="display-4 fw-bold text-success">@Model.TotalPoints</div>
-                }
+        <a href="/Standings" class="text-decoration-none" title="Click here to see how you stack up!">
+            <div class="card text-center shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Total Points</h5>
+                    @if (!Model.HasPicks)
+                    {
+                        <div class="text-secondary">No points available yet for this season.</div>
+                    }
+                    else
+                    {
+                        <div class="display-4 fw-bold text-success">@Model.TotalPoints</div>
+                    }
+                </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <!-- Picks for Current Week Tile -->

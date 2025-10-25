@@ -29,13 +29,14 @@ namespace WebApp.Pages
         public List<RaceResult> RecentResults { get; set; } = new();
         public Pick? CurrentWeekPick { get; set; }
         public Race? CurrentRace { get; set; }
+        public bool HasPicks { get; set; }
 
         public async Task OnGetAsync()
         {
             UserId = _userManager.GetUserId(User);
 
             // Get current season (assumes a Season entity and a way to determine current season)
-            var currentSeason = _context.Pools.AsEnumerable<Pool>()
+            var currentSeason = _context.Pools.AsEnumerable()
                 .OrderByDescending(s => s.CurrentYear)
                 .FirstOrDefault();
 
@@ -59,6 +60,7 @@ namespace WebApp.Pages
                 .OrderBy(s => s.TotalPoints)
                 .ToListAsync();
 
+            HasPicks = standings.Any(s => s.UserId == UserId);
             OverallPlace = standings.FindIndex(s => s.UserId == UserId) + 1;
             TotalPoints = standings.FirstOrDefault(s => s.UserId == UserId)?.TotalPoints ?? 0;
 
