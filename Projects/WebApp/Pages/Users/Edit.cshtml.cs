@@ -12,7 +12,7 @@ namespace WebApp.Pages.Users
         public EditModel(ApplicationDbContext context) => _context = context;
 
         [BindProperty]
-        public User User { get; set; } = default!;
+        public ApplicationUser User { get; set; } = default!;
 
         public async Task<IActionResult> OnGetAsync(int id)
         {

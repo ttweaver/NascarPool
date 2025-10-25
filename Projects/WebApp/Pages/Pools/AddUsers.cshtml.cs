@@ -18,10 +18,10 @@ namespace WebApp.Pages.Pools
         public int PoolId { get; set; }
 
         [BindProperty]
-        public List<int> SelectedUserIds { get; set; } = new();
+        public List<string> SelectedUserIds { get; set; } = new();
 
         public List<Pool> Pools { get; set; } = new();
-        public List<User> Users { get; set; } = new();
+        public List<ApplicationUser> Users { get; set; } = new();
 
         public async Task OnGetAsync()
         {
@@ -58,7 +58,7 @@ namespace WebApp.Pages.Pools
             foreach (var user in usersToAdd)
             {
                 if (pool.Members == null)
-                    pool.Members = new List<User>();
+                    pool.Members = new List<ApplicationUser>();
                 if (!pool.Members.Any(u => u.Id == user.Id))
                     pool.Members.Add(user);
             }

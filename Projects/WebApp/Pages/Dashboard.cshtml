@@ -1,0 +1,74 @@
+@page
+@model WebApp.Pages.DashboardModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+<h1>Dashboard</h1>
+
+<div class="row mb-4">
+    <!-- Overall Place Tile -->
+    <div class="col-md-4 mb-3">
+        <div class="card text-center shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Your Overall Place</h5>
+                <div class="display-4 fw-bold text-primary">@Model.OverallPlace</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Most Recent Race Results Tile -->
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Most Recent Race Results</h5>
+                <div class="mb-2 text-muted">@Model.RecentResults.FirstOrDefault()?.Race?.Name ?? "N/A"</div>
+                @if (Model.RecentResults.Any())
+                {
+                    <table class="table table-sm table-bordered mb-0">
+                        <thead>
+                            <tr>
+                                <th>Place</th>
+                                <th>Driver</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var result in Model.RecentResults)
+                        {
+                            <tr>
+                                <td>@result.Place</td>
+                                <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <div class="text-secondary">No recent results available.</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Picks for Current Week Tile -->
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Your Picks for This Week</h5>
+                <div class="mb-2 text-muted">@Model.CurrentRace?.Name ?? "N/A"</div>
+                @if (Model.CurrentWeekPick != null)
+                {
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item">Pick 1: @Model.CurrentWeekPick.Pick1?.Name (@Model.CurrentWeekPick.Pick1?.CarNumber)</li>
+                        <li class="list-group-item">Pick 2: @Model.CurrentWeekPick.Pick2?.Name (@Model.CurrentWeekPick.Pick2?.CarNumber)</li>
+                        <li class="list-group-item">Pick 3: @Model.CurrentWeekPick.Pick3?.Name (@Model.CurrentWeekPick.Pick3?.CarNumber)</li>
+                    </ul>
+                }
+                else
+                {
+                    <div class="text-secondary">You have not made picks for this week.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

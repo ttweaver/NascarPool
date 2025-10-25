@@ -18,9 +18,9 @@ namespace WebApp.Pages.Races
         [BindProperty(SupportsGet = true)]
         public int RaceId { get; set; }
         public Race? Race { get; set; }
-        public List<User> Users { get; set; } = new();
+        public List<ApplicationUser> Users { get; set; } = new();
         public List<Driver> Drivers { get; set; } = new();
-        public Dictionary<int, Pick> UserPicks { get; set; } = new();
+        public Dictionary<string, Pick> UserPicks { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -69,7 +69,7 @@ namespace WebApp.Pages.Races
 
             for (int i = 0; i < userIds.Length; i++)
             {
-                if (!int.TryParse(userIds[i], out var userId)) continue;
+                var userId = userIds[i];
                 int.TryParse(pick1Ids[i], out var pick1Id);
                 int.TryParse(pick2Ids[i], out var pick2Id);
                 int.TryParse(pick3Ids[i], out var pick3Id);

@@ -10,7 +10,7 @@ namespace WebApp.Pages.Users
         private readonly ApplicationDbContext _context;
         public DetailsModel(ApplicationDbContext context) => _context = context;
 
-        public User User { get; set; } = default!;
+        public ApplicationUser User { get; set; } = default!;
 
         public async Task<IActionResult> OnGetAsync(int id)
         {

@@ -10,7 +10,7 @@ namespace WebApp.Pages.Users
         private readonly ApplicationDbContext _context;
         public IndexModel(ApplicationDbContext context) => _context = context;
 
-        public IList<User> Users { get; set; } = default!;
+        public IList<ApplicationUser> Users { get; set; } = default!;
 
         public async Task OnGetAsync()
         {

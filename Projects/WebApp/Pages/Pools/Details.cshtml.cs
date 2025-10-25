@@ -26,7 +26,7 @@ namespace WebApp.Pages.Pools
             return Page();
         }
 
-        public async Task<IActionResult> OnPostRemoveUserAsync(int id, int userId)
+        public async Task<IActionResult> OnPostRemoveUserAsync(int id, string userId)
         {
             var pool = await _context.Pools
                 .Include(p => p.Members)

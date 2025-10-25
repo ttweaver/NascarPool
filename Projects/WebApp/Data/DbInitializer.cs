@@ -7,17 +7,10 @@ public static class DbInitializer
     {
         if (context.Pools.Any()) return; // Prevent duplicate seed
 
-        var users = new[]
-        {
-            new User { UserName = "alice", Email = "alice@example.com" },
-            new User { UserName = "bob", Email = "bob@example.com" }
-        };
-
         var pool = new Pool
         {
             Name = "2025 Season",
-            Year = DateTime.Now.Year,
-            Members = users.ToList()
+            Year = DateTime.Now.Year
         };
 
         var drivers = new[]

@@ -11,7 +11,7 @@ namespace WebApp.Pages.Users
         public CreateModel(ApplicationDbContext context) => _context = context;
 
         [BindProperty]
-        public User User { get; set; } = default!;
+        public ApplicationUser User { get; set; } = default!;
 
         public void OnGet() { }
 
