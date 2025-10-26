@@ -39,6 +39,8 @@ namespace WebApp.Pages.Races.Pick
 		[BindProperty]
 		public int Pick3Id { get; set; }
 
+		public List<Race> Races { get; set; } = new(); // <-- Added property
+
 		public async Task<IActionResult> OnGetAsync(int raceId)
 		{
 			RaceId = raceId;
@@ -50,6 +52,15 @@ namespace WebApp.Pages.Races.Pick
 			CanEnterPicks = DateTime.Today < Race.Date;
 
 			Drivers = await _context.Drivers.OrderBy(d => d.Name).ToListAsync();
+
+			// Get all races for the same pool as the current race
+			if (Race.PoolId != 0)
+			{
+				Races = await _context.Races
+					.Where(r => r.PoolId == Race.PoolId)
+					.OrderBy(r => r.Date)
+					.ToListAsync();
+			}
 
 			var userId = _userManager.GetUserId(User);
 			if (string.IsNullOrEmpty(userId))

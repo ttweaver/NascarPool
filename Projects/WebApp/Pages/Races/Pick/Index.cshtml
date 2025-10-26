@@ -5,6 +5,24 @@
 }
 <h1>Enter Your Picks</h1>
 
+<!-- Race Navigation Dropdown -->
+@if (Model.Races != null && Model.Races.Any())
+{
+    <div class="mb-4">
+        <label for="raceDropdown" class="form-label">Select Race</label>
+        <select id="raceDropdown" class="form-select" onchange="location.href=this.value;">
+            @foreach (var race in Model.Races)
+            {
+                var selected = race.Id == Model.RaceId ? "selected" : "";
+                <option value="@Url.Page("/Races/Pick/Index", new { raceId = race.Id })"
+                    selected="@(race.Id == Model.RaceId ? "selected" : null)">
+                    @race.Name (@race.Date.ToShortDateString())
+                </option>
+            }
+        </select>
+    </div>
+}
+
 @if (Model.Race == null)
 {
     <div class="alert alert-danger">Race not found.</div>
