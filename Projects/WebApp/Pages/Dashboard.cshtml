@@ -11,7 +11,7 @@
         <a href="/Standings" class="text-decoration-none" title="Click here to see how you stack up!">
             <div class="card text-center shadow-sm h-100">
                 <div class="card-body">
-                    <h5 class="card-title">Your Overall Place</h5>
+                    <h5 class="card-title">Overall Place</h5>
                     @if (!Model.HasPicks)
                     {
                         <div class="text-secondary">There are no standings available yet for this season.</div>
@@ -59,10 +59,24 @@
                         <li class="list-group-item">Pick 2: @Model.CurrentWeekPick.Pick2?.Name (@Model.CurrentWeekPick.Pick2?.CarNumber)</li>
                         <li class="list-group-item">Pick 3: @Model.CurrentWeekPick.Pick3?.Name (@Model.CurrentWeekPick.Pick3?.CarNumber)</li>
                     </ul>
+                    @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
+                    {
+                        <a href="/Races/Pick/@Model.CurrentRace?.Id" class="btn btn-primary">Change your picks for this week</a>
+                    }
+                    else
+                    {
+                        <span title="You cannot change your picks on or after race day." tabindex="0">
+                            <button class="btn btn-primary" disabled >Change your picks for this week</button>
+                        </span>
+                    }
                 }
                 else
                 {
                     <div class="text-secondary">You have not made picks for this week.</div>
+                    @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
+                    {
+                        <a href="/Races/Pick/@Model.CurrentRace?.Id" class="btn btn-primary">Make your picks for this week</a>
+                    }
                 }
             </div>
         </div>

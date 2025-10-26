@@ -1,0 +1,81 @@
+﻿@page "{raceId:int}"
+@model WebApp.Pages.Races.Pick.PicksModel
+@{
+    ViewData["Title"] = "Enter Picks";
+}
+<h1>Enter Your Picks</h1>
+
+@if (Model.Race == null)
+{
+    <div class="alert alert-danger">Race not found.</div>
+}
+else
+{
+    <div class="mb-3">
+        <strong>Race:</strong> @Model.Race.Name <br />
+        <strong>Date:</strong> @Model.Race.Date.ToShortDateString()
+    </div>
+
+    @if (!Model.CanEnterPicks)
+    {
+        <div class="alert alert-warning">Picks can only be entered before race day.</div>
+        @if (Model.ExistingPick != null)
+        {
+            <div class="mb-2">Your picks for this race:</div>
+            <ul class="list-group mb-3">
+                <li class="list-group-item">Pick 1: @Model.ExistingPick.Pick1?.Name (@Model.ExistingPick.Pick1?.CarNumber)</li>
+                <li class="list-group-item">Pick 2: @Model.ExistingPick.Pick2?.Name (@Model.ExistingPick.Pick2?.CarNumber)</li>
+                <li class="list-group-item">Pick 3: @Model.ExistingPick.Pick3?.Name (@Model.ExistingPick.Pick3?.CarNumber)</li>
+            </ul>
+        }
+    }
+    else
+    {
+        <form method="post">
+            <input type="hidden" asp-for="RaceId" />
+            <div class="mb-3">
+                <label asp-for="Pick1Id" class="form-label">Pick 1</label>
+                <select asp-for="Pick1Id" class="form-select">
+                    <option value="">-- Select Driver --</option>
+                    @foreach (var driver in Model.Drivers)
+                    {
+                        <option value="@driver.Id" selected="@(driver.Id == Model.Pick1Id)">@driver.Name (@driver.CarNumber)</option>
+                    }
+                </select>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Pick2Id" class="form-label">Pick 2</label>
+                <select asp-for="Pick2Id" class="form-select">
+                    <option value="">-- Select Driver --</option>
+                    @foreach (var driver in Model.Drivers)
+                    {
+                        <option value="@driver.Id" selected="@(driver.Id == Model.Pick2Id)">@driver.Name (@driver.CarNumber)</option>
+                    }
+                </select>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Pick3Id" class="form-label">Pick 3</label>
+                <select asp-for="Pick3Id" class="form-select">
+                    <option value="">-- Select Driver --</option>
+                    @foreach (var driver in Model.Drivers)
+                    {
+                        <option value="@driver.Id" selected="@(driver.Id == Model.Pick3Id)">@driver.Name (@driver.CarNumber)</option>
+                    }
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Picks</button>
+        </form>
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success mt-3" id="success-alert">@TempData["Success"]</div>
+            <script>
+                setTimeout(function () {
+                    var alert = document.getElementById('success-alert');
+                    if (alert) {
+                        alert.style.display = 'none';
+                    }
+                }, 3000);
+            </script>
+        }
+    }
+}

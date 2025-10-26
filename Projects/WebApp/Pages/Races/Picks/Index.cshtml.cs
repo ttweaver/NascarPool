@@ -8,7 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace WebApp.Pages.Races
+namespace WebApp.Pages.Races.Picks
 {
     public class PicksModel : PageModel
     {
@@ -20,7 +20,7 @@ namespace WebApp.Pages.Races
         public Race? Race { get; set; }
         public List<ApplicationUser> Users { get; set; } = new();
         public List<Driver> Drivers { get; set; } = new();
-        public Dictionary<string, Pick> UserPicks { get; set; } = new();
+        public Dictionary<string, WebApp.Models.Pick> UserPicks { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync()
         {
@@ -99,7 +99,7 @@ namespace WebApp.Pages.Races
                 }
                 else
                 {
-                    var pick = new Pick
+                    var pick = new WebApp.Models.Pick
                     {
                         RaceId = RaceId,
                         UserId = userId,
