@@ -31,6 +31,12 @@ namespace WebApp.Pages
         public Race? CurrentRace { get; set; }
         public bool HasPicks { get; set; }
 
+        public Driver PrimaryDriver { get; set; }
+        public Race FirstRace { get; set; }
+        public List<Driver> AvailableDrivers { get; set; }
+        public Driver SecondHalfPrimaryDriver { get; set; } // Add this property to your DashboardModel class
+        public Race SecondHalfFirstRace { get; set; } // Add this property to your DashboardModel class if it is missing
+
         public async Task OnGetAsync()
         {
             UserId = _userManager.GetUserId(User);
@@ -91,6 +97,104 @@ namespace WebApp.Pages
                     .Include(p => p.Pick3)
                     .FirstOrDefaultAsync(p => p.RaceId == CurrentRace.Id && p.UserId == UserId);
             }
+
+            // Load PrimaryDriver, FirstRace, and AvailableDrivers from your data source
+
+            // Get all drivers for the current season's pool
+            AvailableDrivers = await _context.Drivers
+                .Where(d => d.PoolId == currentSeason.Id)
+                .OrderBy(d => d.Name)
+                .ToListAsync();
+
+            // Get the user's primary driver (assumes a PrimaryDriverId property on ApplicationUser)
+            var user = await _userManager.Users
+                .FirstOrDefaultAsync(u => u.Id == UserId);
+
+            PrimaryDriver = user.PrimaryDriverFirstHalf;
+            SecondHalfPrimaryDriver = user.PrimaryDriverSecondHalf;
+
+            // Get the first race of the current season
+            FirstRace = await _context.Races
+                .Where(r => r.Pool.Id == currentSeason.Id)
+                .OrderBy(r => r.Date)
+                .FirstOrDefaultAsync();
+
+            // Get the first race of the second half of the season (midpoint logic)
+            if (seasonRaceIds.Count > 0)
+            {
+                int midpointIndex = seasonRaceIds.Count / 2;
+                var midpointRaceId = seasonRaceIds.OrderBy(id => id).ElementAt(midpointIndex);
+
+                SecondHalfFirstRace = await _context.Races
+                    .Where(r => r.Id == midpointRaceId)
+                    .FirstOrDefaultAsync();
+            }
         }
-    }
+
+        public async Task<IActionResult> OnPostSetPrimaryDriverAsync(int driverId)
+        {
+            UserId = _userManager.GetUserId(User);
+
+            // Find the user
+            var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == UserId);
+            if (user == null)
+            {
+                return NotFound();
+            }
+
+            // Find the selected driver
+            var selectedDriver = await _context.Drivers.FirstOrDefaultAsync(d => d.Id == driverId);
+            if (selectedDriver == null)
+            {
+                ModelState.AddModelError(string.Empty, "Selected driver not found.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            // Set the primary driver for the first half (adjust property name if needed)
+            user.PrimaryDriverFirstHalf = selectedDriver;
+
+            // Save changes to the user
+            _context.Update(user);
+            await _context.SaveChangesAsync();
+
+            // After saving, reload the page data
+            await OnGetAsync();
+            return Page();
+        }
+
+
+
+			public async Task<IActionResult> OnPostSetPrimarySecondHalfDriverAsync(int secondHalfDriverId)
+		{
+			UserId = _userManager.GetUserId(User);
+
+			// Find the user
+			var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == UserId);
+			if (user == null)
+			{
+				return NotFound();
+			}
+
+			// Find the selected driver
+			var selectedDriver = await _context.Drivers.FirstOrDefaultAsync(d => d.Id == secondHalfDriverId);
+			if (selectedDriver == null)
+			{
+				ModelState.AddModelError(string.Empty, "Selected driver not found.");
+				await OnGetAsync();
+				return Page();
+			}
+
+			// Set the primary driver for the first half (adjust property name if needed)
+			user.PrimaryDriverSecondHalf = selectedDriver;
+			
+			// Save changes to the user
+			_context.Update(user);
+			await _context.SaveChangesAsync();
+
+			// After saving, reload the page data
+			await OnGetAsync();
+			return Page();
+		}
+	}   
 }

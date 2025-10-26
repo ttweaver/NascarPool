@@ -66,7 +66,7 @@
                     else
                     {
                         <span title="You cannot change your picks on or after race day." tabindex="0">
-                            <button class="btn btn-primary" disabled >Change your picks for this week</button>
+                            <a href="/Races/Pick/@Model.CurrentRace?.Id" class="btn btn-primary">Go to your picks for this week</a>
                         </span>
                     }
                 }
@@ -82,6 +82,89 @@
         </div>
     </div>
 </div>
+
+<!-- Primary Driver Tile (First Half) -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Primary Driver (First Half)</h5>
+                @if (Model.PrimaryDriver != null)
+                {
+                    <div class="mb-2 fw-bold text-info">
+                        @Model.PrimaryDriver.Name (@Model.PrimaryDriver.CarNumber)
+                    </div>
+                }
+                else
+                {
+                    <div class="text-secondary mb-2">No primary driver set.</div>
+                }
+                @if (Model.FirstRace != null && Model.FirstRace.Date > DateTime.Today)
+                {
+                    <form method="post" asp-page-handler="SetPrimaryDriver" class="d-inline">
+                        <select name="driverId" class="form-select mb-2" required>
+                            <option value="">Select driver...</option>
+                            @foreach (var driver in Model.AvailableDrivers)
+                            {
+                                var selected = Model.PrimaryDriver != null && Model.PrimaryDriver.Id == driver.Id ? "selected" : "";
+                                <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">
+                                    @driver.Name (@driver.CarNumber)
+                                </option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-primary">Set Primary Driver</button>
+                    </form>
+                    <div class="form-text">You can set your primary driver until @Model.FirstRace.Date.ToString("MMMM d, yyyy").</div>
+                }
+                else
+                {
+                    <div class="form-text text-secondary">Primary driver selection is closed.</div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Primary Driver Tile (Second Half) -->
+    <div class="col-md-4 mb-3">
+        <div class="card shadow-sm h-100">
+            <div class="card-body text-center">
+                <h5 class="card-title">Primary Driver (Second Half)</h5>
+                @if (Model.SecondHalfPrimaryDriver != null)
+                {
+                    <div class="mb-2 fw-bold text-info">
+                        @Model.SecondHalfPrimaryDriver.Name (@Model.SecondHalfPrimaryDriver.CarNumber)
+                    </div>
+                }
+                else
+                {
+                    <div class="text-secondary mb-2">No primary driver set.</div>
+                }
+                @if (Model.SecondHalfFirstRace != null && Model.SecondHalfFirstRace.Date > DateTime.Today)
+                {
+                    <form method="post" asp-page-handler="SetPrimarySecondHalfDriver" class="d-inline">
+                        <select name="secondHalfDriverId" class="form-select mb-2" required>
+                            <option value="">Select driver...</option>
+                            @foreach (var driver in Model.AvailableDrivers)
+                            {
+                                var selected = Model.SecondHalfPrimaryDriver != null && Model.SecondHalfPrimaryDriver.Id == driver.Id ? "selected" : "";
+                                <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">
+                                    @driver.Name (@driver.CarNumber)
+                                </option>
+                            }
+                        </select>
+                        <button type="submit" class="btn btn-primary">Set Primary Driver</button>
+                    </form>
+                    <div class="form-text">You can set your primary driver until @Model.SecondHalfFirstRace.Date.ToString("MMMM d, yyyy").</div>
+                }
+                else
+                {
+                    <div class="form-text text-secondary">Primary driver selection is closed.</div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
 
 <!-- Most Recent Race Results Tile in its own row, full width -->
 <div class="row mb-4">
@@ -201,7 +284,7 @@ function renderPagination(totalPages) {
 
     for (let i = 1; i <= totalPages; i++) {
         const li = document.createElement('li');
-        li.className = 'page-item' + (i === currentPage ? ' active' : '');
+        li.className = 'page-item' + (i === currentPage ? ' active' : '' );
         const a = document.createElement('a');
         a.className = 'page-link';
         a.href = '#';
