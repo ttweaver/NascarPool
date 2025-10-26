@@ -5,12 +5,12 @@ public static class DbInitializer
 {
     public static void Seed(ApplicationDbContext context)
     {
-        if (context.Pools.Any()) return; // Prevent duplicate seed
+        if (context.Pools.Any(c => c.Year == 2025)) return; // Prevent duplicate seed
 
         var pool = new Pool
         {
             Name = "2025 Season",
-            Year = DateTime.Now.Year
+            Year = 2025
         };
 
         var drivers = new[]

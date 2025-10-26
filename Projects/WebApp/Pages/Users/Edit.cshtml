@@ -1,4 +1,4 @@
-@page "{id:int}"
+@page "{id}"
 @model EditModel
 @{
     ViewData["Title"] = "Edit User";
@@ -6,6 +6,16 @@
 <h1>Edit User</h1>
 <form method="post">
     <input type="hidden" asp-for="User.Id" />
+    <div>
+        <label asp-for="User.FirstName"></label>
+        <input asp-for="User.FirstName" />
+        <span asp-validation-for="User.FirstName"></span>
+    </div>
+    <div>
+        <label asp-for="User.LastName"></label>
+        <input asp-for="User.LastName" />
+        <span asp-validation-for="User.LastName"></span>
+    </div>
     <div>
         <label asp-for="User.UserName"></label>
         <input asp-for="User.UserName" />

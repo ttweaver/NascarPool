@@ -1,4 +1,4 @@
-@page "{id:int}"
+@page "{id}"
 @model WebApp.Pages.Users.DetailsModel
 @{
     ViewData["Title"] = "User Details";
@@ -6,6 +6,10 @@
 <h1 class="mb-4">User Details</h1>
 <div class="card card-body shadow-sm mb-3">
     <dl class="row">
+        <dt class="col-sm-3">First Name:</dt>
+        <dd class="col-sm-9">@Model.User.FirstName</dd>
+        <dt class="col-sm-3">Last Name:</dt>
+        <dd class="col-sm-9">@Model.User.LastName</dd>
         <dt class="col-sm-3">UserName:</dt>
         <dd class="col-sm-9">@Model.User.UserName</dd>
     </dl>

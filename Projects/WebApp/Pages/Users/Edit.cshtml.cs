@@ -14,7 +14,7 @@ namespace WebApp.Pages.Users
         [BindProperty]
         public ApplicationUser User { get; set; } = default!;
 
-        public async Task<IActionResult> OnGetAsync(int id)
+        public async Task<IActionResult> OnGetAsync(string id)
         {
             User = await _context.Users.FindAsync(id);
             if (User == null) return NotFound();

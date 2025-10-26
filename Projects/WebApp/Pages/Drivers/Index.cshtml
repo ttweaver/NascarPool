@@ -1,9 +1,23 @@
-@page
+@page "{poolId:int?}"
 @model WebApp.Pages.Drivers.IndexModel
 @{
     ViewData["Title"] = "Drivers";
+    var pools = Model.Pools.OrderByDescending(p => p.Year).ToList();
+    var selectedPoolId = Model.SelectedPoolId != 0 ? Model.SelectedPoolId : pools.FirstOrDefault()?.Id ?? 0;
 }
 <h1 class="mb-4">Drivers</h1>
+
+<form method="get" class="mb-3">
+    <label for="PoolId" class="form-label">Select Pool</label>
+    <select id="PoolId" name="poolId" class="form-select" onchange="this.form.submit()">
+        @foreach (var pool in pools)
+        {
+            <option value="@pool.Id" selected="@(pool.Id == selectedPoolId ? "selected" : null)">
+                @pool.Name (@pool.Year)
+            </option>
+        }
+    </select>
+</form>
 
 <!-- Button to launch the modal -->
 <button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#createDriverModal">
@@ -28,6 +42,7 @@
                         <label for="CarNumber" class="form-label">Car Number</label>
                         <input type="text" class="form-control" id="CarNumber" name="CarNumber" required />
                     </div>
+                    <input type="hidden" name="PoolId" value="@selectedPoolId" />
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
