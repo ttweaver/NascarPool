@@ -41,7 +41,7 @@ else
         {
             <div class="mb-2">Your picks for this race:</div>
             <ul class="list-group mb-3">
-                <li class="list-group-item">Pick 1: @Model.ExistingPick.Pick1?.Name (@Model.ExistingPick.Pick1?.CarNumber)</li>
+                <li class="list-group-item">Primary: @Model.ExistingPick.Pick1?.Name (@Model.ExistingPick.Pick1?.CarNumber)</li>
                 <li class="list-group-item">Pick 2: @Model.ExistingPick.Pick2?.Name (@Model.ExistingPick.Pick2?.CarNumber)</li>
                 <li class="list-group-item">Pick 3: @Model.ExistingPick.Pick3?.Name (@Model.ExistingPick.Pick3?.CarNumber)</li>
             </ul>
@@ -52,14 +52,15 @@ else
         <form method="post">
             <input type="hidden" asp-for="RaceId" />
             <div class="mb-3">
-                <label asp-for="Pick1Id" class="form-label">Pick 1</label>
-                <select asp-for="Pick1Id" class="form-select">
+                <label asp-for="Pick1Id" class="form-label">Primary</label>
+                <select asp-for="Pick1Id" class="form-select" disabled>
                     <option value="">-- Select Driver --</option>
                     @foreach (var driver in Model.Drivers)
                     {
                         <option value="@driver.Id" selected="@(driver.Id == Model.Pick1Id)">@driver.Name (@driver.CarNumber)</option>
                     }
                 </select>
+                <input type="hidden" asp-for="Pick1Id" />
             </div>
             <div class="mb-3">
                 <label asp-for="Pick2Id" class="form-label">Pick 2</label>

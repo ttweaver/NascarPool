@@ -66,15 +66,38 @@ namespace WebApp.Pages.Races.Pick
 			if (string.IsNullOrEmpty(userId))
 				return Challenge(); // Redirect to login if userId is null
 
+			// Determine if current race is in first or second part of the season
+			int totalRaces = Races.Count;
+			int half = totalRaces / 2;
+			int raceIndex = Races.FindIndex(r => r.Id == raceId);
+
+			bool isFirstHalf = raceIndex >= 0 && raceIndex < half;
+
+			// Get current user
+			var user = await _userManager.Users.FirstOrDefaultAsync(u => u.Id == userId);
+			int? primaryDriverId = null;
+			if (user != null)
+			{
+				if (isFirstHalf)
+				{
+					primaryDriverId = user.PrimaryDriverFirstHalfId;
+				}
+				else
+				{
+					primaryDriverId = user.PrimaryDriverSecondHalfId;
+				}
+			}
+
 			ExistingPick = await _context.Picks
 				.Include(p => p.Pick1)
 				.Include(p => p.Pick2)
 				.Include(p => p.Pick3)
 				.FirstOrDefaultAsync(p => p.RaceId == raceId && p.UserId == userId);
 
+			Pick1Id = primaryDriverId ?? 0;
+
 			if (ExistingPick != null)
 			{
-				Pick1Id = ExistingPick.Pick1Id;
 				Pick2Id = ExistingPick.Pick2Id;
 				Pick3Id = ExistingPick.Pick3Id;
 			}
