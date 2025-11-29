@@ -13,7 +13,21 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = false)
     .AddEntityFrameworkStores<ApplicationDbContext>();
-builder.Services.AddRazorPages();
+
+builder.Services.AddAuthorization(options =>
+{
+	options.AddPolicy("AdminPolicy", policy =>
+		policy.RequireRole("Admin"));
+});
+
+builder.Services.AddRazorPages(options =>
+{
+	options.Conventions.AuthorizeFolder("/Pools", "AdminPolicy");
+    options.Conventions.AuthorizeFolder("/Drivers", "AdminPolicy");
+    options.Conventions.AuthorizeFolder("/Races", "AdminPolicy");
+    options.Conventions.AuthorizeFolder("/Standings", "AdminPolicy");
+    options.Conventions.AuthorizeFolder("/Users", "AdminPolicy");
+});
 
 var app = builder.Build();
 

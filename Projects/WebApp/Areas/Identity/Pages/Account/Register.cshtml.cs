@@ -68,7 +68,7 @@ namespace WebApp.Areas.Identity.Pages.Account
 
             if (allowed == null)
             {
-                ModelState.AddModelError(string.Empty, "Registration is only allowed for users on the approved list.");
+                ModelState.AddModelError(string.Empty, "Registration is not allowed");
                 return Page();
             }
 
