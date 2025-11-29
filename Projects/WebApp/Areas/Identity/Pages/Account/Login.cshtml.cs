@@ -10,10 +10,12 @@ namespace WebApp.Areas.Identity.Pages.Account
     public class LoginModel : PageModel
     {
         private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public LoginModel(SignInManager<ApplicationUser> signInManager)
+        public LoginModel(SignInManager<ApplicationUser> signInManager, UserManager<ApplicationUser> userManager)
         {
             _signInManager = signInManager;
+            _userManager = userManager;
         }
 
         [BindProperty]
@@ -37,7 +39,7 @@ namespace WebApp.Areas.Identity.Pages.Account
 
         public void OnGet() { }
 
-        public async Task<IActionResult> OnPostAsync()
+        public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
             if (!ModelState.IsValid)
                 return Page();
@@ -47,7 +49,28 @@ namespace WebApp.Areas.Identity.Pages.Account
 
             if (result.Succeeded)
             {
-                return RedirectToPage("/Dashboard");
+				var user = await _userManager.FindByNameAsync(Input.Email);
+				if (user != null)
+				{
+					var isAdmin = await _userManager.IsInRoleAsync(user, "Admin");
+					var is2faEnabled = await _userManager.GetTwoFactorEnabledAsync(user);
+
+					if (isAdmin && !is2faEnabled)
+					{
+						return RedirectToPage("/Account/Manage/EnableAuthenticator");
+					}
+				}
+
+				return RedirectToPage("/Dashboard");
+            }
+
+            if (result.RequiresTwoFactor)
+            {
+                return RedirectToPage("./LoginWith2fa", new
+                {
+                    ReturnUrl = "/Dashboard",
+                    RememberMe = Input.RememberMe
+                });
             }
 
             ModelState.AddModelError(string.Empty, "Invalid login attempt.");
