@@ -159,3 +159,4 @@ src/Razor/benchmarks/Microsoft.AspNetCore.Razor.Microbenchmarks/BenchmarkDotNet.
 
 # testapp modifications
 src/Razor/benchmarks/testapps/ComponentApp/Components/Pages/Generated.razor
+/Projects/WebApp/Properties/PublishProfiles
