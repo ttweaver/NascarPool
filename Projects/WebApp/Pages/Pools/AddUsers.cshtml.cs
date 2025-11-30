@@ -26,7 +26,7 @@ namespace WebApp.Pages.Pools
         public async Task OnGetAsync()
         {
             Pools = await _context.Pools.ToListAsync();
-            Users = await _context.Users.ToListAsync();
+            Users = await _context.Users.Players().ToListAsync();
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -35,7 +35,7 @@ namespace WebApp.Pages.Pools
             {
                 ModelState.AddModelError(string.Empty, "Please select at least one user.");
                 Pools = await _context.Pools.ToListAsync();
-                Users = await _context.Users.ToListAsync();
+                Users = await _context.Users.Players().ToListAsync();
                 return Page();
             }
 
@@ -47,12 +47,12 @@ namespace WebApp.Pages.Pools
             {
                 ModelState.AddModelError(string.Empty, "Pool not found.");
                 Pools = await _context.Pools.ToListAsync();
-                Users = await _context.Users.ToListAsync();
+                Users = await _context.Users.Players().ToListAsync();
                 return Page();
             }
 
-            var usersToAdd = await _context.Users
-                .Where(u => SelectedUserIds.Contains(u.Id))
+            var usersToAdd = await _context.Users.Players()
+				.Where(u => SelectedUserIds.Contains(u.Id))
                 .ToListAsync();
 
             foreach (var user in usersToAdd)
