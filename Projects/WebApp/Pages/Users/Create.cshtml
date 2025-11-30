@@ -10,6 +10,25 @@
         <input asp-for="User.UserName" class="form-control" />
         <span asp-validation-for="User.UserName" class="text-danger"></span>
     </div>
+
+    <div class="mb-3">
+        <label asp-for="User.FirstName" class="form-label"></label>
+        <input asp-for="User.FirstName" class="form-control" />
+        <span asp-validation-for="User.FirstName" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="User.LastName" class="form-label"></label>
+        <input asp-for="User.LastName" class="form-control" />
+        <span asp-validation-for="User.LastName" class="text-danger"></span>
+    </div>
+
+    <div class="form-check mb-3">
+        <input asp-for="User.IsPlayer" class="form-check-input" />
+        <label asp-for="User.IsPlayer" class="form-check-label">Is Player</label>
+        <span asp-validation-for="User.IsPlayer" class="text-danger"></span>
+    </div>
+
     <div class="d-grid mb-2">
         <button type="submit" class="btn btn-success w-100">Create</button>
     </div>

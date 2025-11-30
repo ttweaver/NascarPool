@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using WebApp.Data;
 using WebApp.Models;
+using System.Threading.Tasks;
 
 namespace WebApp.Pages.Users
 {
@@ -20,7 +21,8 @@ namespace WebApp.Pages.Users
             return Page();
         }
 
-        public async Task<IActionResult> OnPostAsync(int id)
+        // changed parameter type to string to match Identity user key
+        public async Task<IActionResult> OnPostAsync(string id)
         {
             var user = await _context.Users.FindAsync(id);
             if (user != null)

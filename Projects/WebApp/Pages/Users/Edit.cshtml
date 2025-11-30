@@ -1,26 +1,37 @@
 @page "{id}"
-@model EditModel
+@model WebApp.Pages.Users.EditModel
 @{
     ViewData["Title"] = "Edit User";
 }
-<h1>Edit User</h1>
-<form method="post">
+<h1 class="mb-4">Edit User</h1>
+
+<form method="post" class="card card-body shadow-sm">
     <input type="hidden" asp-for="User.Id" />
-    <div>
-        <label asp-for="User.FirstName"></label>
-        <input asp-for="User.FirstName" />
-        <span asp-validation-for="User.FirstName"></span>
+
+    <div class="mb-3">
+        <label asp-for="User.UserName" class="form-label"></label>
+        <input asp-for="User.UserName" class="form-control" />
+        <span asp-validation-for="User.UserName" class="text-danger"></span>
     </div>
-    <div>
-        <label asp-for="User.LastName"></label>
-        <input asp-for="User.LastName" />
-        <span asp-validation-for="User.LastName"></span>
+
+    <div class="mb-3">
+        <label asp-for="User.FirstName" class="form-label"></label>
+        <input asp-for="User.FirstName" class="form-control" />
+        <span asp-validation-for="User.FirstName" class="text-danger"></span>
     </div>
-    <div>
-        <label asp-for="User.UserName"></label>
-        <input asp-for="User.UserName" />
-        <span asp-validation-for="User.UserName"></span>
+
+    <div class="mb-3">
+        <label asp-for="User.LastName" class="form-label"></label>
+        <input asp-for="User.LastName" class="form-control" />
+        <span asp-validation-for="User.LastName" class="text-danger"></span>
     </div>
-    <button type="submit">Save</button>
-    <a asp-page="Index">Back to List</a>
+
+    <div class="form-check mb-3">
+        <input asp-for="User.IsPlayer" class="form-check-input" />
+        <label asp-for="User.IsPlayer" class="form-check-label">Is Player</label>
+        <span asp-validation-for="User.IsPlayer" class="text-danger"></span>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Save</button>
+    <a asp-page="Index" class="btn btn-secondary ms-2">Back to List</a>
 </form>

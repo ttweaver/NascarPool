@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
 using WebApp.Models;
+using System.Threading.Tasks;
 
 namespace WebApp.Pages.Users
 {
@@ -16,8 +16,11 @@ namespace WebApp.Pages.Users
 
         public async Task<IActionResult> OnGetAsync(string id)
         {
+            if (string.IsNullOrEmpty(id)) return NotFound();
+
             User = await _context.Users.FindAsync(id);
             if (User == null) return NotFound();
+
             return Page();
         }
 
@@ -25,18 +28,19 @@ namespace WebApp.Pages.Users
         {
             if (!ModelState.IsValid) return Page();
 
-            _context.Attach(User).State = EntityState.Modified;
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!_context.Users.Any(e => e.Id == User.Id))
-                    return NotFound();
-                else
-                    throw;
-            }
+            var existing = await _context.Users.FindAsync(User.Id);
+            if (existing == null) return NotFound();
+
+            // update only the editable fields to avoid accidental overwrites
+            existing.UserName = User.UserName;
+            existing.FirstName = User.FirstName;
+            existing.LastName = User.LastName;
+            existing.IsPlayer = User.IsPlayer;
+            existing.Email = User.Email;
+
+            _context.Users.Update(existing);
+            await _context.SaveChangesAsync();
+
             return RedirectToPage("Index");
         }
     }

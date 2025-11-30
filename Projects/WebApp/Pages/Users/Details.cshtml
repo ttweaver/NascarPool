@@ -4,14 +4,25 @@
     ViewData["Title"] = "User Details";
 }
 <h1 class="mb-4">User Details</h1>
-<div class="card card-body shadow-sm mb-3">
+
+<div class="card card-body shadow-sm">
     <dl class="row">
-        <dt class="col-sm-3">First Name:</dt>
-        <dd class="col-sm-9">@Model.User.FirstName</dd>
-        <dt class="col-sm-3">Last Name:</dt>
-        <dd class="col-sm-9">@Model.User.LastName</dd>
-        <dt class="col-sm-3">UserName:</dt>
+        <dt class="col-sm-3">UserName</dt>
         <dd class="col-sm-9">@Model.User.UserName</dd>
+
+        <dt class="col-sm-3">First Name</dt>
+        <dd class="col-sm-9">@Model.User.FirstName</dd>
+
+        <dt class="col-sm-3">Last Name</dt>
+        <dd class="col-sm-9">@Model.User.LastName</dd>
+
+        <dt class="col-sm-3">Email</dt>
+        <dd class="col-sm-9">@Model.User.Email</dd>
+
+        <dt class="col-sm-3">Is Player</dt>
+        <dd class="col-sm-9">@(Model.User.IsPlayer ? "Yes" : "No")</dd>
     </dl>
+
+    <a asp-page="Edit" asp-route-id="@Model.User.Id" class="btn btn-warning">Edit</a>
+    <a asp-page="Index" class="btn btn-secondary ms-2">Back to List</a>
 </div>
-<a asp-page="Index" class="btn btn-secondary">Back to List</a>
