@@ -8,6 +8,7 @@ namespace WebApp.Models
     {
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
+        public bool IsPlayer { get; set; } = true;
         public int? PrimaryDriverFirstHalfId { get; set; }
         public int? PrimaryDriverSecondHalfId { get; set; }
         public Driver PrimaryDriverFirstHalf { get; set; } = default!;
