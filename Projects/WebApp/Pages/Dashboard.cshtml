@@ -12,7 +12,7 @@
             <div class="card text-center shadow-sm h-100">
                 <div class="card-body">
                     <h5 class="card-title">Overall Place</h5>
-                    @if (!Model.HasPicks)
+                    @if (!Model.HasResults)
                     {
                         <div class="text-secondary">There are no standings available yet for this season.</div>
                     }
@@ -31,7 +31,7 @@
             <div class="card text-center shadow-sm h-100">
                 <div class="card-body">
                     <h5 class="card-title">Total Points</h5>
-                    @if (!Model.HasPicks)
+                    @if (!Model.HasResults)
                     {
                         <div class="text-secondary">No points available yet for this season.</div>
                     }
@@ -52,6 +52,12 @@
                 <div class="mb-2 text-muted">
                     @(Model.CurrentRace != null && !string.IsNullOrWhiteSpace(Model.CurrentRace.Name) ? Model.CurrentRace.Name : "N/A")
                 </div>
+
+                @{
+                    // Calculate days until race (nullable). Show warning when race is within 3 days (1..3 days left).
+                    int? daysUntilRace = Model.CurrentRace != null ? (Model.CurrentRace.Date.Date - DateTime.Today).Days : (int?)null;
+                }
+
                 @if (Model.CurrentWeekPick != null)
                 {
                     <ul class="list-group list-group-flush">
@@ -59,6 +65,15 @@
                         <li class="list-group-item">Pick 2: @Model.CurrentWeekPick.Pick2?.Name (@Model.CurrentWeekPick.Pick2?.CarNumber)</li>
                         <li class="list-group-item">Pick 3: @Model.CurrentWeekPick.Pick3?.Name (@Model.CurrentWeekPick.Pick3?.CarNumber)</li>
                     </ul>
+
+                    @* Days-until-race warning when close (within 3 days) *@
+                    @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
+                    {
+                        <div class="alert alert-warning mt-2 mb-2" role="alert">
+                            Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to change your picks.
+                        </div>
+                    }
+
                     @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
                     {
                         <a href="/Races/Pick/@Model.CurrentRace?.Id" class="btn btn-primary">Change your picks for this week</a>
@@ -73,6 +88,15 @@
                 else
                 {
                     <div class="text-secondary">You have not made picks for this week.</div>
+
+                    @* Days-until-race warning when close (within 3 days) for users who haven't picked yet *@
+                    @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
+                    {
+                        <div class="alert alert-warning mt-2 mb-2" role="alert">
+                            Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to make your picks.
+                        </div>
+                    }
+
                     @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
                     {
                         <a href="/Races/Pick/@Model.CurrentRace?.Id" class="btn btn-primary">Make your picks for this week</a>
@@ -102,7 +126,7 @@
                 @if (Model.FirstRace != null && Model.FirstRace.Date > DateTime.Today)
                 {
                     <form method="post" asp-page-handler="SetPrimaryDriver" class="d-inline">
-                        <select name="driverId" class="form-select mb-2" required>
+                        <select id="driverSelectFirst" name="driverId" class="form-select mb-2" required>
                             <option value="">Select driver...</option>
                             @foreach (var driver in Model.AvailableDrivers)
                             {
@@ -112,7 +136,7 @@
                                 </option>
                             }
                         </select>
-                        <button type="submit" class="btn btn-primary">Set Primary Driver</button>
+                        <button id="driverSubmitFirst" type="submit" class="btn btn-primary" disabled>Set Primary Driver</button>
                     </form>
                     <div class="form-text">You can set your primary driver until @Model.FirstRace.Date.ToString("MMMM d, yyyy").</div>
                 }
@@ -142,7 +166,7 @@
                 @if (Model.SecondHalfFirstRace != null && Model.SecondHalfFirstRace.Date > DateTime.Today)
                 {
                     <form method="post" asp-page-handler="SetPrimarySecondHalfDriver" class="d-inline">
-                        <select name="secondHalfDriverId" class="form-select mb-2" required>
+                        <select id="driverSelectSecond" name="secondHalfDriverId" class="form-select mb-2" required>
                             <option value="">Select driver...</option>
                             @foreach (var driver in Model.AvailableDrivers)
                             {
@@ -152,7 +176,7 @@
                                 </option>
                             }
                         </select>
-                        <button type="submit" class="btn btn-primary">Set Primary Driver</button>
+                        <button id="driverSubmitSecond" type="submit" class="btn btn-primary" disabled>Set Primary Driver</button>
                     </form>
                     <div class="form-text">You can set your primary driver until @Model.SecondHalfFirstRace.Date.ToString("MMMM d, yyyy").</div>
                 }
@@ -299,11 +323,28 @@ function renderPagination(totalPages) {
     }
 }
 
+function setupSelectEnable(selectId, buttonId) {
+    const select = document.getElementById(selectId);
+    const btn = document.getElementById(buttonId);
+    if (!select || !btn) return;
+    const initial = select.value;
+    // Ensure button is disabled until user changes selection
+    btn.disabled = true;
+    select.addEventListener('change', function() {
+        // Enable only if a non-empty different value is selected
+        btn.disabled = !(select.value && select.value !== initial);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     allRows = Array.from(document.querySelectorAll('#resultsTable tbody tr'));
     filteredRows = allRows;
     renderPage();
     document.getElementById('searchDriver').addEventListener('input', filterResultsAndPaginate);
+
+    // Wire up primary driver selects so buttons remain disabled until selection changes
+    setupSelectEnable('driverSelectFirst', 'driverSubmitFirst');
+    setupSelectEnable('driverSelectSecond', 'driverSubmitSecond');
 });
 </script>
 }

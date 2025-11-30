@@ -13,45 +13,59 @@
     </dl>
 </div>
 
-@if (Model.Pool.Members != null && Model.Pool.Members.Any())
-{
-    <h2 class="h5 mt-4">Users in this Pool</h2>
-    <ul class="list-group mb-3">
-        @foreach (var user in Model.Pool.Members)
+<!-- Collapsible Users Section -->
+<div class="mb-4">
+    <button class="btn btn-outline-primary w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#usersCollapse" aria-expanded="false" aria-controls="usersCollapse">
+        Users in this Pool
+    </button>
+    <div class="collapse mt-3" id="usersCollapse">
+        @if (Model.Pool.Members != null && Model.Pool.Members.Any())
         {
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>@user.UserName</span>
-                <form method="post" asp-page-handler="RemoveUser" asp-route-id="@Model.Pool.Id" asp-route-userId="@user.Id" class="m-0 remove-user-form">
-                    <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmRemoveModal" data-userid="@user.Id" data-username="@user.UserName">Remove</button>
-                </form>
-            </li>
+            <ul class="list-group mb-3">
+                @foreach (var user in Model.Pool.Members)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>@user.UserName</span>
+                        <form method="post" asp-page-handler="RemoveUser" asp-route-id="@Model.Pool.Id" asp-route-userId="@user.Id" class="m-0 remove-user-form">
+                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#confirmRemoveModal" data-userid="@user.Id" data-username="@user.UserName">Remove</button>
+                        </form>
+                    </li>
+                }
+            </ul>
         }
-    </ul>
-}
-else
-{
-    <div class="alert alert-info">No users have been added to this pool yet.</div>
-}
+        else
+        {
+            <div class="alert alert-info">No users have been added to this pool yet.</div>
+        }
+    </div>
+</div>
 
-@if (Model.Pool.Drivers != null && Model.Pool.Drivers.Any())
-{
-    <h2 class="h5 mt-4">Drivers in this Pool</h2>
-    <ul class="list-group mb-3">
-        @foreach (var driver in Model.Pool.Drivers)
+<!-- Collapsible Drivers Section -->
+<div class="mb-4">
+    <button class="btn btn-outline-primary w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#driversCollapse" aria-expanded="false" aria-controls="driversCollapse">
+        Drivers in this Pool
+    </button>
+    <div class="collapse mt-3" id="driversCollapse">
+        @if (Model.Pool.Drivers != null && Model.Pool.Drivers.Any())
         {
-            <li class="list-group-item d-flex justify-content-between align-items-center">
-                <span>
-                    <strong>@driver.Name</strong>
-                    <span class="text-muted ms-2">#@driver.CarNumber</span>
-                </span>
-            </li>
+            <ul class="list-group mb-3">
+                @foreach (var driver in Model.Pool.Drivers)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <span>
+                            <strong>@driver.Name</strong>
+                            <span class="text-muted ms-2">#@driver.CarNumber</span>
+                        </span>
+                    </li>
+                }
+            </ul>
         }
-    </ul>
-}
-else
-{
-    <div class="alert alert-info">No drivers have been added to this pool yet.</div>
-}
+        else
+        {
+            <div class="alert alert-info">No drivers have been added to this pool yet.</div>
+        }
+    </div>
+</div>
 
 <!-- Collapsible Races Section -->
 <div class="mb-4">

@@ -129,6 +129,7 @@ namespace WebApp.Pages.Races
         public async Task<IActionResult> OnPostCalculatePointsAsync()
         {
             await PickPointsCalculator.CalculateAllPicksPointsAsync(_context, RaceId);
+            await _context.SaveChangesAsync();
             return RedirectToPage(new { raceId = RaceId });
         }
     }

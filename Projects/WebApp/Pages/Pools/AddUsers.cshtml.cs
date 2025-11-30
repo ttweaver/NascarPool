@@ -25,8 +25,12 @@ namespace WebApp.Pages.Pools
 
         public async Task OnGetAsync()
         {
-            Pools = await _context.Pools.ToListAsync();
-            Users = await _context.Users.Players().ToListAsync();
+            var latestPool = await _context.Pools.OrderByDescending(static p => p.Year).FirstOrDefaultAsync();
+            if (latestPool != null)
+            {
+                PoolId = latestPool.Id;
+                await LoadPoolsAndAvailableUsersAsync(PoolId);
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
@@ -34,8 +38,7 @@ namespace WebApp.Pages.Pools
             if (SelectedUserIds.Count == 0)
             {
                 ModelState.AddModelError(string.Empty, "Please select at least one user.");
-                Pools = await _context.Pools.ToListAsync();
-                Users = await _context.Users.Players().ToListAsync();
+                await LoadPoolsAndAvailableUsersAsync(PoolId);
                 return Page();
             }
 
@@ -46,13 +49,12 @@ namespace WebApp.Pages.Pools
             if (pool == null)
             {
                 ModelState.AddModelError(string.Empty, "Pool not found.");
-                Pools = await _context.Pools.ToListAsync();
-                Users = await _context.Users.Players().ToListAsync();
+                await LoadPoolsAndAvailableUsersAsync(PoolId);
                 return Page();
             }
 
             var usersToAdd = await _context.Users.Players()
-				.Where(u => SelectedUserIds.Contains(u.Id))
+                .Where(u => SelectedUserIds.Contains(u.Id))
                 .ToListAsync();
 
             foreach (var user in usersToAdd)
@@ -65,6 +67,29 @@ namespace WebApp.Pages.Pools
 
             await _context.SaveChangesAsync();
             return RedirectToPage("Details", new { id = PoolId });
+        }
+
+        private async Task LoadPoolsAndAvailableUsersAsync(int poolId)
+        {
+            Pools = await _context.Pools.ToListAsync();
+
+            if (poolId > 0)
+            {
+                var pool = await _context.Pools
+                    .Include(p => p.Members)
+                    .FirstOrDefaultAsync(p => p.Id == poolId);
+
+                if (pool != null && pool.Members != null && pool.Members.Any())
+                {
+                    var memberIds = pool.Members.Select(m => m.Id).ToList();
+                    Users = await _context.Users.Players()
+                        .Where(u => !memberIds.Contains(u.Id))
+                        .ToListAsync();
+                    return;
+                }
+            }
+
+            Users = await _context.Users.Players().ToListAsync();
         }
     }
 }

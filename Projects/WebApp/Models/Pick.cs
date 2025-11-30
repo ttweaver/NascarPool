@@ -39,6 +39,5 @@ public class Pick
 
         // Save changes to the database
         context.Picks.Update(this);
-        context.SaveChanges();
     }
 }
