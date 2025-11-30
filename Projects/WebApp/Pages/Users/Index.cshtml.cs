@@ -14,7 +14,7 @@ namespace WebApp.Pages.Users
 
         public async Task OnGetAsync()
         {
-            Users = await _context.Users.ToListAsync();
+            Users = await _context.Users.Players().OrderBy(p => p.FirstName).ToListAsync();
         }
     }
 }
