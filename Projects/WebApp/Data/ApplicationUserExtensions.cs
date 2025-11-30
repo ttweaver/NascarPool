@@ -1,4 +1,3 @@
-Data/ApplicationUserExtensions.cs
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using WebApp.Models;
