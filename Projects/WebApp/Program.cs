@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Authentication.Google;
+using Microsoft.AspNetCore.Authentication.Facebook;
+using Microsoft.AspNetCore.Authentication.Twitter;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
@@ -20,6 +23,23 @@ builder.Services.AddAuthorization(options =>
 	options.AddPolicy("AdminPolicy", policy =>
 		policy.RequireRole("Admin"));
 });
+
+builder.Services.AddAuthentication()
+    .AddGoogle(options =>
+    {
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+	})
+    .AddFacebook(options =>
+    {
+        options.AppId = builder.Configuration["Authentication:Facebook:AppId"];
+        options.AppSecret = builder.Configuration["Authentication:Facebook:AppSecret"];
+	})
+	.AddTwitter(options =>
+    {
+        options.ConsumerKey = builder.Configuration["Authentication:Twitter:ClientId"];
+        options.ConsumerSecret = builder.Configuration["Authentication:Twitter:ClientSecret"];
+	});
 
 builder.Services.AddRazorPages(options =>
 {
