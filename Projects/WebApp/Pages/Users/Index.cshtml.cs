@@ -14,7 +14,10 @@ namespace WebApp.Pages.Users
 
         public async Task OnGetAsync()
         {
-            Users = await _context.Users.Players().OrderBy(p => p.FirstName).ToListAsync();
+            Users = await _context.Users.Players()
+                                        .Include(d => d.PrimaryDriverFirstHalf)
+                                        .Include(d => d.PrimaryDriverSecondHalf)
+                                        .OrderBy(p => p.FirstName).ToListAsync();
         }
     }
 }

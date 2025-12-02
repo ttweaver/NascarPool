@@ -26,6 +26,28 @@
         <span asp-validation-for="User.UserName" class="text-danger"></span>
     </div>
 
+    <div class="mb-3">
+        <label asp-for="User.Email" class="form-label"></label>
+        <input asp-for="User.Email" class="form-control" />
+        <span asp-validation-for="User.Email" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="User.PrimaryDriverFirstHalfId" class="form-label">Primary Driver — First Half</label>
+        <select asp-for="User.PrimaryDriverFirstHalfId" class="form-select" asp-items="Model.DriverOptions">
+            <option value="">-- None --</option>
+        </select>
+        <span asp-validation-for="User.PrimaryDriverFirstHalfId" class="text-danger"></span>
+    </div>
+
+    <div class="mb-3">
+        <label asp-for="User.PrimaryDriverSecondHalfId" class="form-label">Primary Driver — Second Half</label>
+        <select asp-for="User.PrimaryDriverSecondHalfId" class="form-select" asp-items="Model.DriverOptions">
+            <option value="">-- None --</option>
+        </select>
+        <span asp-validation-for="User.PrimaryDriverSecondHalfId" class="text-danger"></span>
+    </div>
+
     <div class="form-check mb-3">
         <input asp-for="User.IsPlayer" class="form-check-input" />
         <label asp-for="User.IsPlayer" class="form-check-label">Is Player</label>

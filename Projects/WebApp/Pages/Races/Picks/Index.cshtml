@@ -22,6 +22,8 @@
         {
             var user = Model.Users[i];
             var pick = Model.UserPicks.ContainsKey(user.Id) ? Model.UserPicks[user.Id] : null;
+            // Determine effective Pick1: existing pick if present, otherwise per-user default for this half
+            var effectivePick1 = pick?.Pick1Id ?? (Model.UserDefaultPick1.ContainsKey(user.Id) && Model.UserDefaultPick1[user.Id].HasValue ? Model.UserDefaultPick1[user.Id].Value : 0);
             <tr>
                 <td>
                     @user.UserName
@@ -32,7 +34,7 @@
                         <option value="">Select</option>
                         @foreach (var driver in Model.Drivers)
                         {
-                            var selected = pick?.Pick1Id == driver.Id ? "selected" : "";
+                            var selected = effectivePick1 == driver.Id ? "selected" : "";
                             <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">@driver.Name (@driver.CarNumber)
                             </option>
                         }

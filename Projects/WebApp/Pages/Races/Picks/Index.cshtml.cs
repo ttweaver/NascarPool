@@ -1,12 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
 using WebApp.Models;
-using WebApp.Helpers;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace WebApp.Pages.Races.Picks
 {
@@ -22,6 +22,10 @@ namespace WebApp.Pages.Races.Picks
         public List<Driver> Drivers { get; set; } = new();
         public Dictionary<string, WebApp.Models.Pick> UserPicks { get; set; } = new();
 
+        // New: races for the pool and per-user default Pick1 (first or second half)
+        public List<Race> Races { get; set; } = new();
+        public Dictionary<string, int?> UserDefaultPick1 { get; set; } = new();
+
         public async Task<IActionResult> OnGetAsync()
         {
             Race = await _context.Races.Include(r => r.Pool.Members).FirstOrDefaultAsync(r => r.Id == RaceId);
@@ -36,6 +40,7 @@ namespace WebApp.Pages.Races.Picks
             // Get drivers in the current pool
             Drivers = await _context.Drivers
                 .Where(d => d.Pool.Id == Race.Pool.Id)
+                .OrderBy(d => d.Name)
                 .ToListAsync();
 
             // Get existing picks for this race
@@ -44,6 +49,37 @@ namespace WebApp.Pages.Races.Picks
                 .ToListAsync();
 
             UserPicks = picks.ToDictionary(p => p.UserId, p => p);
+
+            // Build races list for the pool and compute first/second half
+            if (Race.PoolId != 0)
+            {
+                Races = await _context.Races
+                    .Where(r => r.PoolId == Race.PoolId)
+                    .OrderBy(r => r.Date)
+                    .ToListAsync();
+            }
+
+            var totalRaces = Races.Count;
+            var half = totalRaces / 2;
+            var raceIndex = Races.FindIndex(r => r.Id == RaceId);
+            var isFirstHalf = raceIndex >= 0 && raceIndex < half;
+
+            // Prepare per-user default Pick1 (first-half or second-half primary driver)
+            UserDefaultPick1 = new Dictionary<string, int?>();
+            foreach (var user in Users)
+            {
+                int? primaryDriverId = null;
+                // ApplicationUser is expected to have these properties; handle if missing (null)
+                var userEntry = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+                if (userEntry != null)
+                {
+                    if (isFirstHalf)
+                        primaryDriverId = userEntry.PrimaryDriverFirstHalfId;
+                    else
+                        primaryDriverId = userEntry.PrimaryDriverSecondHalfId;
+                }
+                UserDefaultPick1[user.Id] = primaryDriverId;
+            }
 
             return Page();
         }
@@ -61,6 +97,35 @@ namespace WebApp.Pages.Races.Picks
             Drivers = await _context.Drivers
                 .Where(d => d.Pool.Id == Race.Pool.Id)
                 .ToListAsync();
+
+            // Build races list for the pool and compute first/second half (so view can re-render defaults on validation errors)
+            if (Race.PoolId != 0)
+            {
+                Races = await _context.Races
+                    .Where(r => r.PoolId == Race.PoolId)
+                    .OrderBy(r => r.Date)
+                    .ToListAsync();
+            }
+
+            var totalRaces = Races.Count;
+            var half = totalRaces / 2;
+            var raceIndex = Races.FindIndex(r => r.Id == RaceId);
+            var isFirstHalf = raceIndex >= 0 && raceIndex < half;
+
+            UserDefaultPick1 = new Dictionary<string, int?>();
+            foreach (var user in Users)
+            {
+                int? primaryDriverId = null;
+                var userEntry = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+                if (userEntry != null)
+                {
+                    if (isFirstHalf)
+                        primaryDriverId = userEntry.PrimaryDriverFirstHalfId;
+                    else
+                        primaryDriverId = userEntry.PrimaryDriverSecondHalfId;
+                }
+                UserDefaultPick1[user.Id] = primaryDriverId;
+            }
 
             var userIds = Request.Form["UserIds"].ToArray();
             var pick1Ids = Request.Form["Pick1Ids"].ToArray();
