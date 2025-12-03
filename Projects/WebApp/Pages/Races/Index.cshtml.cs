@@ -18,12 +18,30 @@ namespace WebApp.Pages.Races
         public IList<Race> Races { get; set; } = default!;
         public IList<Pool> Pools { get; set; } = default!;
 
-        public async Task OnGetAsync()
+		// Added: selected pool id for the page (matches Drivers page behavior)
+		public int SelectedPoolId { get; set; }
+
+        public async Task OnGetAsync(int? poolId = null)
         {
-            Races = await _context.Races
-                .Include(r => r.Pool)
+            Pools = await _context.Pools
+                .OrderByDescending(p => p.Year)
                 .ToListAsync();
-            Pools = await _context.Pools.ToListAsync();
+
+			var lastestPool = await _context.Pools.GetLatestPoolYearAsync();
+			if (poolId.HasValue)
+			{
+				SelectedPoolId = poolId.Value;
+			}
+			else
+			{
+				SelectedPoolId = lastestPool.Id;
+			}
+
+			Races = await _context.Races
+                .Include(r => r.Pool)
+                .Where(r => r.PoolId == SelectedPoolId)
+                .ToListAsync();
+           
         }
 
         // CREATE
@@ -31,6 +49,7 @@ namespace WebApp.Pages.Races
         {
             var name = Request.Form["CreateRaceName"];
             var dateStr = Request.Form["CreateRaceDate"];
+            var poolIdStr = Request.Form["PoolId"];
 
             if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(dateStr))
             {
@@ -46,9 +65,18 @@ namespace WebApp.Pages.Races
                 return Page();
             }
 
-            // Find the current year pool
-            var currentPool = _context.Pools.AsEnumerable()
-                .FirstOrDefault(p => p.CurrentYear);
+            Pool currentPool = null;
+
+            if (!string.IsNullOrWhiteSpace(poolIdStr) && int.TryParse(poolIdStr, out var postedPoolId))
+            {
+                currentPool = await _context.Pools.FindAsync(postedPoolId);
+            }
+
+            // fallback to pool marked as current year
+            if (currentPool == null)
+            {
+                currentPool = await _context.Pools.FirstOrDefaultAsync(p => p.CurrentYear);
+            }
 
             if (currentPool == null)
             {

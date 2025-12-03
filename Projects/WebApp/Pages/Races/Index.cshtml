@@ -1,15 +1,31 @@
-@page
+@page "{poolId:int?}"
 @model WebApp.Pages.Races.IndexModel
 @using Microsoft.AspNetCore.Mvc.Rendering
 @{
     ViewData["Title"] = "Races";
+    var pools = Model.Pools.OrderByDescending(p => p.Year).ToList();
+    
 }
 <h1 class="mb-4">Races</h1>
 
-<!-- Button to launch the Create modal -->
-<button type="button" class="btn btn-primary mb-3" data-bs-toggle="modal" data-bs-target="#createRaceModal">
-    Create New Race
-</button>
+<div class="d-flex align-items-center w-100 mb-3">
+    <form method="get" class="d-flex align-items-center">
+        <label for="PoolId" class="form-label fs-5 fw-bold text-primary me-2 mb-0">Select Pool</label>
+        <select id="PoolId" name="poolId" class="form-select w-auto" onchange="this.form.submit()">
+            @foreach (var pool in pools)
+            {
+                <option value="@pool.Id" selected="@(pool.Id == Model.SelectedPoolId ? "selected" : null)">
+                    @pool.Name (@pool.Year)
+                </option>
+            }
+        </select>
+    </form>
+
+    <!-- Button to launch the Create modal (aligned to the right) -->
+    <button type="button" class="btn btn-primary ms-auto" data-bs-toggle="modal" data-bs-target="#createRaceModal">
+        Add New Race
+    </button>
+</div>
 
 <!-- Create Race Modal -->
 <div class="modal fade" id="createRaceModal" tabindex="-1" aria-labelledby="createRaceModalLabel" aria-hidden="true">
@@ -30,6 +46,7 @@
                         <label for="CreateRaceDate" class="form-label">Date</label>
                         <input type="date" class="form-control" id="CreateRaceDate" name="CreateRaceDate" required />
                     </div>
+                    <input type="hidden" name="PoolId" value="@Model.SelectedPoolId" />
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>

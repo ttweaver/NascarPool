@@ -31,17 +31,21 @@ namespace WebApp.Pages.Drivers
 
         public async Task OnGetAsync(int? poolId)
         {
-            Pools = await _context.Pools.OrderByDescending(p => p.Year).ToListAsync();
-            if (poolId.HasValue && Pools.Any(p => p.Id == poolId.Value))
-            {
-                SelectedPoolId = poolId.Value;
-            }
-            else if (SelectedPoolId == 0 && Pools.Any())
-            {
-                SelectedPoolId = Pools.First().Id;
-            }
+			Pools = await _context.Pools
+				.OrderByDescending(p => p.Year)
+				.ToListAsync();
 
-            Drivers = await _context.Drivers
+			var lastestPool = await _context.Pools.GetLatestPoolYearAsync();
+			if (poolId.HasValue)
+			{
+				SelectedPoolId = poolId.Value;
+			}
+			else
+			{
+				SelectedPoolId = lastestPool.Id;
+			}
+
+			Drivers = await _context.Drivers
                 .Include(d => d.Pool)
                 .Where(d => d.PoolId == SelectedPoolId)
                 .ToListAsync();
@@ -78,6 +82,42 @@ namespace WebApp.Pages.Drivers
             };
 
             _context.Drivers.Add(driver);
+            await _context.SaveChangesAsync();
+
+            return RedirectToPage(new { PoolId = SelectedPoolId });
+        }
+
+        public async Task<IActionResult> OnPostEditAsync()
+        {
+            // Ensure pools are available for repopulating the page if we need to redisplay
+            Pools = await _context.Pools.OrderByDescending(p => p.Year).ToListAsync();
+            if (SelectedPoolId == 0 && Pools.Any())
+            {
+                SelectedPoolId = Pools.First().Id;
+            }
+
+            // Basic validation
+            if (DriverId == 0 || string.IsNullOrWhiteSpace(DriverName) || string.IsNullOrWhiteSpace(CarNumber))
+            {
+                ModelState.AddModelError(string.Empty, "Driver, Name and Car Number are required.");
+                await OnGetAsync(SelectedPoolId);
+                return Page();
+            }
+
+            var driver = await _context.Drivers.FindAsync(DriverId);
+            if (driver == null)
+            {
+                ModelState.AddModelError(string.Empty, "Driver not found.");
+                await OnGetAsync(SelectedPoolId);
+                return Page();
+            }
+
+            // Update fields
+            driver.Name = DriverName.Trim();
+            driver.CarNumber = CarNumber.Trim();
+            driver.PoolId = SelectedPoolId;
+
+            _context.Drivers.Update(driver);
             await _context.SaveChangesAsync();
 
             return RedirectToPage(new { PoolId = SelectedPoolId });
