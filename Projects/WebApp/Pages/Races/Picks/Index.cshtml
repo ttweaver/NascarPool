@@ -66,7 +66,11 @@
         }
         </tbody>
     </table>
-    <button type="submit" class="btn btn-success">Save All Picks</button>
+
+    <div class="mb-3">
+        <button type="submit" class="btn btn-success me-2">Save All Picks</button>
+        <a asp-page="/Races/Index" class="btn btn-secondary">Back to Races</a>
+    </div>
 </form>
 
 @if (!ViewData.ModelState.IsValid)
