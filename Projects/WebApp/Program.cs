@@ -27,18 +27,18 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddAuthentication()
     .AddGoogle(options =>
     {
-        options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
-        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+        options.ClientId = builder.Configuration["ConnectionStrings:Authentication:Google:ClientId"];
+        options.ClientSecret = builder.Configuration["ConnectionStrings:Authentication:Google:ClientSecret"];
 	})
     .AddFacebook(options =>
     {
-        options.AppId = builder.Configuration["Authentication:Facebook:AppId"];
-        options.AppSecret = builder.Configuration["Authentication:Facebook:AppSecret"];
+        options.AppId = builder.Configuration["ConnectionStrings:Authentication:Facebook:AppId"];
+        options.AppSecret = builder.Configuration["ConnectionStrings:Authentication:Facebook:AppSecret"];
 	})
 	.AddTwitter(options =>
     {
-        options.ConsumerKey = builder.Configuration["Authentication:Twitter:ClientId"];
-        options.ConsumerSecret = builder.Configuration["Authentication:Twitter:ClientSecret"];
+        options.ConsumerKey = builder.Configuration["ConnectionStrings:Authentication:Twitter:ClientId"];
+        options.ConsumerSecret = builder.Configuration["ConnectionStrings:Authentication:Twitter:ClientSecret"];
 	});
 
 builder.Services.AddRazorPages(options =>
