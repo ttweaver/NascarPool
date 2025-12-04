@@ -11,7 +11,7 @@
     <table class="table table-bordered">
         <thead>
             <tr>
-                <th>User</th>
+                <th>Player</th>
                 <th>Pick 1</th>
                 <th>Pick 2</th>
                 <th>Pick 3</th>
@@ -26,7 +26,7 @@
             var effectivePick1 = pick?.Pick1Id ?? (Model.UserDefaultPick1.ContainsKey(user.Id) && Model.UserDefaultPick1[user.Id].HasValue ? Model.UserDefaultPick1[user.Id].Value : 0);
             <tr>
                 <td>
-                    @user.UserName
+                    @user.FirstName @user.LastName
                     <input type="hidden" name="UserIds" value="@user.Id" />
                 </td>
                 <td>

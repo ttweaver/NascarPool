@@ -31,10 +31,12 @@ namespace WebApp.Pages.Races.Picks
             Race = await _context.Races.Include(r => r.Pool.Members).FirstOrDefaultAsync(r => r.Id == RaceId);
             if (Race == null) return NotFound();
 
-            // Get users in the current pool
+            // Get users in the current pool, ordered by first name (primary) then last name as a tie-breaker
             var memberIds = Race.Pool.Members.Select(m => m.Id).ToList();
             Users = await _context.Users
                 .Where(u => memberIds.Contains(u.Id))
+                .OrderBy(u => u.FirstName)
+                .ThenBy(u => u.LastName)
                 .ToListAsync();
 
             // Get drivers in the current pool
@@ -92,6 +94,8 @@ namespace WebApp.Pages.Races.Picks
             var memberIds = Race.Pool.Members.Select(m => m.Id).ToList();
             Users = await _context.Users
                 .Where(u => memberIds.Contains(u.Id))
+                .OrderBy(u => u.FirstName)
+                .ThenBy(u => u.LastName)
                 .ToListAsync();
 
             Drivers = await _context.Drivers

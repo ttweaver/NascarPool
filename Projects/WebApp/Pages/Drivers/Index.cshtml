@@ -1,5 +1,6 @@
 @page
 @model WebApp.Pages.Drivers.IndexModel
+@using System.Linq
 @{
     ViewData["Title"] = "Drivers";
     var pools = Model.Pools.OrderByDescending(p => p.Year).ToList();
@@ -115,7 +116,8 @@
         </tr>
     </thead>
     <tbody>
-    @foreach (var driver in Model.Drivers)
+    @foreach (var driver in Model.Drivers
+                    .OrderBy(d => d.Name ?? string.Empty))
     {
         <tr>
             <td>@driver.Name</td>
