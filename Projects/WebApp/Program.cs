@@ -14,7 +14,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-builder.Services.AddDefaultIdentity<ApplicationUser>(options => options.SignIn.RequireConfirmedAccount = true)
+builder.Services.AddDefaultIdentity<ApplicationUser>(options => {options.SignIn.RequireConfirmedAccount = true; options.Stores.SchemaVersion = IdentitySchemaVersions.Version3; })
     .AddRoles<IdentityRole>()
 	.AddEntityFrameworkStores<ApplicationDbContext>();
 
@@ -52,6 +52,13 @@ builder.Services.AddRazorPages(options =>
 
 builder.Services.Configure<WebApp.Services.EmailSettings>(builder.Configuration.GetSection("ConnectionStrings:EmailSettings"));
 builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, WebApp.Services.EmailSender>();
+
+builder.Services.Configure<IdentityPasskeyOptions>(options =>
+{
+	options.ServerDomain = "fastlapfantasy.net";
+	options.AuthenticatorTimeout = TimeSpan.FromMinutes(3);
+	options.ChallengeSize = 64;
+});
 
 var app = builder.Build();
 
