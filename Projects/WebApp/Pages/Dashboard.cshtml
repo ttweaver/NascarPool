@@ -5,6 +5,20 @@
 }
 <h1>Dashboard</h1>
 
+<div class="mb-2 text-muted">
+    @if (Model.CurrentRace != null)
+    {
+        <span> This week's race: </span>
+        <span class="fw-semibold">@Model.CurrentRace.Name</span>
+        <span class="ms-2">(@Model.CurrentRaceNumber of @Model.TotalRaces)</span>
+    }
+    else
+    {
+        <span>No upcoming race</span>
+        <span class="ms-2">(@Model.TotalRaces race@(Model.TotalRaces == 1 ? "" : "s") this season)</span>
+    }
+</div>
+
 <div class="row mb-4">
     <!-- Overall Place Tile (clickable, with tooltip) -->
     <div class="col-md-4 mb-3">
@@ -39,6 +53,7 @@
                     {
                         <div class="display-4 fw-bold text-success">@Model.TotalPoints</div>
                     }
+                    <div class="mt-2 text-muted">Races this season: @Model.TotalRaces</div>
                 </div>
             </div>
         </a>
@@ -50,11 +65,13 @@
             <div class="card-body">
                 <h5 class="card-title">Picks for This Week</h5>
                 <div class="mb-2 text-muted">
-                    @(Model.CurrentRace != null && !string.IsNullOrWhiteSpace(Model.CurrentRace.Name) ? Model.CurrentRace.Name : "N/A")
+                    @(Model.CurrentRace != null && !string.IsNullOrWhiteSpace(Model.CurrentRace.Name)
+                        ? $"{Model.CurrentRace.Name} — {Model.CurrentRace.Date.ToString("MMMM d, yyyy")}"
+                        : "N/A")
                 </div>
 
                 @{
-                    // Calculate days until race (nullable). Show warning when race is within 3 days (1..3 days left).
+
                     int? daysUntilRace = Model.CurrentRace != null ? (Model.CurrentRace.Date.Date - DateTime.Today).Days : (int?)null;
                 }
 
@@ -66,7 +83,6 @@
                         <li class="list-group-item">Pick 3: @Model.CurrentWeekPick.Pick3?.Name (@Model.CurrentWeekPick.Pick3?.CarNumber)</li>
                     </ul>
 
-                    @* Days-until-race warning when close (within 3 days) *@
                     @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
                     {
                         <div class="alert alert-warning mt-2 mb-2" role="alert">
@@ -89,7 +105,6 @@
                 {
                     <div class="text-secondary">You have not made picks for this week.</div>
 
-                    @* Days-until-race warning when close (within 3 days) for users who haven't picked yet *@
                     @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
                     {
                         <div class="alert alert-warning mt-2 mb-2" role="alert">
@@ -196,10 +211,32 @@
         <div class="card shadow-sm">
             <div class="card-body">
                 <h5 class="card-title">Most Recent Race Results</h5>
-                @if (Model.RecentResults != null && Model.RecentResults.Any() && Model.RecentResults.FirstOrDefault()?.Race?.Name != null)
+
+                @* Race selector: only show when there are races with results *@
+                @if (Model.RacesWithResults != null && Model.RacesWithResults.Any())
+                {
+                    var selectedRaceId = Model.RecentResults?.FirstOrDefault()?.Race?.Id ?? Model.RacesWithResults.First().Id;
+                    <div class="mb-2 d-flex align-items-center">
+                        <label for="raceSelect" class="me-2 mb-0">Race:</label>
+                        <select id="raceSelect" class="form-select w-auto">
+                            @foreach (var race in Model.RacesWithResults)
+                            {
+                                var optSelected = race.Id == selectedRaceId ? "selected" : "";
+                                <option value="@race.Id" data-name="@race.Name" data-date="@race.Date.ToString("MMMM d, yyyy")" selected="@(optSelected == "selected" ? "selected" : null)">
+                                    @race.Name — @race.Date.ToString("MMMM d, yyyy")
+                                </option>
+                            }
+                        </select>
+                    </div>
+                }
+                else
                 {
                     <div class="mb-2 text-muted">
-                        @Model.RecentResults.FirstOrDefault().Race.Name
+                        @if (Model.RecentResults != null && Model.RecentResults.Any() && Model.RecentResults.FirstOrDefault()?.Race?.Name != null)
+                        {
+                            var recentRace = Model.RecentResults.FirstOrDefault().Race;
+                            @($"{recentRace.Name} — {recentRace.Date.ToString("MMMM d, yyyy")}")
+                        }
                     </div>
                 }
 
@@ -218,11 +255,21 @@
                         </tr>
                     </thead>
                     <tbody id="resultsBody">
-                    @if (Model.RecentResults != null && Model.RecentResults.Any())
+                    @if (Model.AllRecentResults != null && Model.AllRecentResults.Any())
+                    {
+                        foreach (var result in Model.AllRecentResults)
+                        {
+                            <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
+                                <td>@result.Place</td>
+                                <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
+                            </tr>
+                        }
+                    }
+                    else if (Model.RecentResults != null && Model.RecentResults.Any())
                     {
                         foreach (var result in Model.RecentResults)
                         {
-                            <tr>
+                            <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
                                 <td>@result.Place</td>
                                 <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
                             </tr>
@@ -255,21 +302,39 @@ let currentPage = 1;
 let allRows = [];
 let filteredRows = [];
 
+// return currently selected race id (string) or null
+function getSelectedRaceId() {
+    const sel = document.getElementById('raceSelect');
+    return sel ? sel.value : null;
+}
+
+function updateHeaderFromSelectedRace() {
+    const sel = document.getElementById('raceSelect');
+    if (!sel) return;
+    const opt = sel.selectedOptions[0];
+    if (!opt) return;
+    const name = opt.dataset.name;
+    const date = opt.dataset.date;
+}
+
 function filterResultsAndPaginate() {
     const input = document.getElementById('searchDriver');
     const filter = input.value.trim().toLowerCase();
+    const selectedRaceId = getSelectedRaceId();
 
-    // If search is empty, show all rows
-    if (!filter) {
-        filteredRows = allRows;
-    } else {
-        filteredRows = allRows.filter(row => {
-            const driverCell = row.getElementsByTagName('td')[1];
-            if (!driverCell) return false;
-            const txtValue = driverCell.textContent || driverCell.innerText;
-            return txtValue.toLowerCase().indexOf(filter) > -1;
-        });
-    }
+    filteredRows = allRows.filter(row => {
+        // filter by race id first
+        const rowRaceId = row.dataset.raceId;
+        if (selectedRaceId && rowRaceId !== selectedRaceId) return false;
+
+        if (!filter) return true;
+
+        const driverCell = row.getElementsByTagName('td')[1];
+        if (!driverCell) return false;
+        const txtValue = driverCell.textContent || driverCell.innerText;
+        return txtValue.toLowerCase().indexOf(filter) > -1;
+    });
+
     currentPage = 1;
     renderPage();
 }
@@ -337,10 +402,30 @@ function setupSelectEnable(selectId, buttonId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    allRows = Array.from(document.querySelectorAll('#resultsTable tbody tr'));
+    allRows = Array.from(document.querySelectorAll('#resultsTable tbody tr[data-race-id]'));
+    // If there are no rows with data-race-id, fall back to any rows (to preserve "No recent results" row)
+    if (!allRows.length) {
+        allRows = Array.from(document.querySelectorAll('#resultsTable tbody tr'));
+    }
+
+    // Initialize race header and wire race select change
+    const raceSelect = document.getElementById('raceSelect');
+    if (raceSelect) {
+        updateHeaderFromSelectedRace();
+        raceSelect.addEventListener('change', function() {
+            updateHeaderFromSelectedRace();
+            filterResultsAndPaginate();
+        });
+    }
+
     filteredRows = allRows;
+
     renderPage();
-    document.getElementById('searchDriver').addEventListener('input', filterResultsAndPaginate);
+
+    const search = document.getElementById('searchDriver');
+    if (search) {
+        search.addEventListener('input', filterResultsAndPaginate);
+    }
 
     // Wire up primary driver selects so buttons remain disabled until selection changes
     setupSelectEnable('driverSelectFirst', 'driverSubmitFirst');

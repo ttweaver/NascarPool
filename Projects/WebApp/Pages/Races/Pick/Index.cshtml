@@ -29,11 +29,6 @@
 }
 else
 {
-    <div class="mb-3">
-        <strong>Race:</strong> @Model.Race.Name <br />
-        <strong>Date:</strong> @Model.Race.Date.ToShortDateString()
-    </div>
-
     @if (!Model.CanEnterPicks)
     {
         <div class="alert alert-warning">Picks can only be entered before race day.</div>

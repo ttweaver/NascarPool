@@ -26,7 +26,11 @@ namespace WebApp.Pages
         public string UserId { get; set; }
         public int OverallPlace { get; set; }
         public int TotalPoints { get; set; }
+        public int TotalRaces { get; set; }
+        public int CurrentRaceNumber { get; set; } // new: 1-based index of current race in season
         public List<RaceResult> RecentResults { get; set; } = new();
+        public List<RaceResult> AllRecentResults { get; set; } = new(); // All results for races that have results
+        public List<Race> RacesWithResults { get; set; } = new(); // races that have results
         public Pick? CurrentWeekPick { get; set; }
         public Race? CurrentRace { get; set; }
         public bool HasResults { get; set; }
@@ -58,6 +62,9 @@ namespace WebApp.Pages
                 .Where(r => r.Pool.Id == currentSeason.Id)
                 .Select(r => r.Id)
                 .ToListAsync();
+            
+            // Total number of races in the current season
+            TotalRaces = seasonRaceIds.Count;
 
             var standings = await _context.Picks
                 .Where(p => seasonRaceIds.Contains(p.RaceId))
@@ -72,7 +79,7 @@ namespace WebApp.Pages
             TotalPoints = standings.FirstOrDefault(s => s.UserId == UserId)?.TotalPoints ?? 0;
 
             var recentRace = await _context.Races
-                .Where(r => r.Pool.Id == currentSeason.Id)
+                .Where(r => r.Pool.Id == currentSeason.Id && r.Date <= new DateTime(2026,2,15))
                 .OrderByDescending(r => r.Date)
                 .FirstOrDefaultAsync();
 
@@ -82,6 +89,24 @@ namespace WebApp.Pages
                     .Where(r => r.RaceId == recentRace.Id)
                     .OrderBy(r => r.Place)
                     .Include(r => r.Driver)
+                    .Include(r => r.Race)
+                    .ToListAsync();
+            }
+
+            // --- New: Load all races that have results and load all results for those races ---
+            RacesWithResults = await _context.Races
+                .Where(r => r.Pool.Id == currentSeason.Id && _context.RaceResults.Any(rr => rr.RaceId == r.Id))
+                .OrderBy(r => r.Date)
+                .ToListAsync();
+
+            if (RacesWithResults.Any())
+            {
+                AllRecentResults = await _context.RaceResults
+                    .Include(rr => rr.Driver)
+                    .Include(rr => rr.Race)
+                    .Where(rr => RacesWithResults.Select(r => r.Id).Contains(rr.RaceId))
+                    .OrderByDescending(rr => rr.Race.Date)
+                    .ThenBy(rr => rr.Place)
                     .ToListAsync();
             }
 
@@ -97,6 +122,19 @@ namespace WebApp.Pages
                     .Include(p => p.Pick2)
                     .Include(p => p.Pick3)
                     .FirstOrDefaultAsync(p => p.RaceId == CurrentRace.Id && p.UserId == UserId);
+
+                // Compute 1-based index of the current race within the season (ordered by date)
+                var orderedSeasonRaceIds = await _context.Races
+                    .Where(r => r.Pool.Id == currentSeason.Id)
+                    .OrderBy(r => r.Date)
+                    .Select(r => r.Id)
+                    .ToListAsync();
+
+                var idx = orderedSeasonRaceIds.IndexOf(CurrentRace.Id);
+                if (idx >= 0)
+                {
+                    CurrentRaceNumber = idx + 1;
+                }
             }
 
             // Load PrimaryDriver, FirstRace, and AvailableDrivers from your data source
@@ -131,46 +169,47 @@ namespace WebApp.Pages
                     .FirstOrDefaultAsync();
             }
 
-            // --- New: Compute HasResults per requirement ---
-            // HasResults should be true if:
-            //  - the first race exists,
-            //  - every participant (anyone who has picks in this season) has submitted a pick for the first race with all pick slots filled,
-            //  - and race results for the first race contain entries for each driver chosen by those picks.
+            // --- New: If RecentResults is empty but we have AllRecentResults, pick the most recent race from RacesWithResults ---
+            if ((RecentResults == null || !RecentResults.Any()) && RacesWithResults.Any())
+            {
+                var mostRecent = RacesWithResults.First();
+                RecentResults = await _context.RaceResults
+                    .Where(r => r.RaceId == mostRecent.Id)
+                    .OrderBy(r => r.Place)
+                    .Include(r => r.Driver)
+                    .Include(r => r.Race)
+                    .ToListAsync();
+            }
+
+            // --- New/unchanged: Compute HasResults per requirement ---
             if (FirstRace != null)
             {
-                // driver ids that have results for the first race
                 var firstRaceResultDriverIds = await _context.RaceResults
                     .Where(rr => rr.RaceId == FirstRace.Id)
                     .Select(rr => rr.DriverId)
                     .ToListAsync();
 
-                // participants in the season (anyone who has submitted picks in this season)
                 var participantUserIds = await _context.Picks
                     .Where(p => seasonRaceIds.Contains(p.RaceId))
                     .Select(p => p.UserId)
                     .Distinct()
                     .ToListAsync();
 
-                // picks for the first race for those participants
                 var firstRacePicks = await _context.Picks
                     .Where(p => p.RaceId == FirstRace.Id && participantUserIds.Contains(p.UserId))
                     .ToListAsync();
 
-                // if no results exist for the first race, HasResults must be false
                 if (!firstRaceResultDriverIds.Any())
                 {
                     HasResults = false;
                 }
                 else
                 {
-                    // verify every participant has a pick for the first race and that all pick driver ids exist in race results
                     bool allParticipantsHaveCompletePicksAndResults = participantUserIds.All(uid =>
                     {
                         var pick = firstRacePicks.FirstOrDefault(p => p.UserId == uid);
                         if (pick == null) return false;
 
-                        // pick.Pick1Id/Pick2Id/Pick3Id are ints on the model; ensure they are present in results
-                        // guard against default zero or unexpected values by checking presence in result set
                         return firstRaceResultDriverIds.Contains(pick.Pick1Id)
                             && firstRaceResultDriverIds.Contains(pick.Pick2Id)
                             && firstRaceResultDriverIds.Contains(pick.Pick3Id);
