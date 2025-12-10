@@ -2,31 +2,34 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
-using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Antiforgery;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 using WebApp.Models;
 
 namespace WebApp.Areas.Identity.Pages.Account
 {
     public class LoginModel : PageModel
     {
-        private readonly SignInManager<ApplicationUser> _signInManager;
+		private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly ILogger<LoginModel> _logger;
+        private readonly IAntiforgery _antiforgery;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public LoginModel(SignInManager<ApplicationUser> signInManager, ILogger<LoginModel> logger)
+        public LoginModel(
+            SignInManager<ApplicationUser> signInManager,
+            ILogger<LoginModel> logger,
+            IAntiforgery antiforgery,
+            UserManager<ApplicationUser> userManager)
         {
             _signInManager = signInManager;
             _logger = logger;
+            _antiforgery = antiforgery;
+            _userManager = userManager;
         }
 
         /// <summary>
@@ -83,9 +86,17 @@ namespace WebApp.Areas.Identity.Pages.Account
             /// </summary>
             [Display(Name = "Remember me?")]
             public bool RememberMe { get; set; }
-        }
 
-        public async Task OnGetAsync(string returnUrl = null)
+			public PasskeyInputModel? Passkey { get; set; }
+		}
+
+		public class PasskeyInputModel
+		{
+			public string? CredentialJson { get; set; }
+			public string? Error { get; set; }
+		}
+
+		public async Task OnGetAsync(string returnUrl = null)
         {
             if (!string.IsNullOrEmpty(ErrorMessage))
             {
@@ -94,15 +105,21 @@ namespace WebApp.Areas.Identity.Pages.Account
 
             returnUrl ??= Url.Content("~/");
 
-            // Clear the existing external cookie to ensure a clean login process
             await HttpContext.SignOutAsync(IdentityConstants.ExternalScheme);
-
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
-
             ReturnUrl = returnUrl;
         }
+		public async Task<IActionResult> OnPostMakeAssertionOptionsAsync(string? username)
+		{
+			await _antiforgery.ValidateRequestAsync(HttpContext);
 
-        public async Task<IActionResult> OnPostAsync(string returnUrl = null)
+			var user = string.IsNullOrEmpty(username) ? null : await _userManager.FindByNameAsync(username);
+			var optionsString = await _signInManager.MakePasskeyRequestOptionsAsync(user);
+
+			return Content(optionsString, "application/json");
+		}
+
+		public async Task<IActionResult> OnPostAsync(string returnUrl = null)
         {
             returnUrl ??= Url.Content("~/Dashboard");
 
@@ -110,28 +127,41 @@ namespace WebApp.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
-                // This doesn't count login failures towards account lockout
-                // To enable password failures to trigger account lockout, set lockoutOnFailure: true
-                var result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
-                if (result.Succeeded)
-                {
-                    var userManager = _signInManager.UserManager;
-                    var user = await userManager.FindByNameAsync(Input.Email);
-                    if (user != null)
-                    {
-                        var isAdmin = await userManager.IsInRoleAsync(user, "Admin");
-                        var is2faEnabled = await userManager.GetTwoFactorEnabledAsync(user);
+				if (!string.IsNullOrEmpty(Input.Passkey?.Error))
+				{
+                    ModelState.AddModelError(Input.Passkey?.Error, Input.Passkey?.Error);
+                    return Page();
+				}
 
-                        if (isAdmin && !is2faEnabled)
-                        {
-                            return RedirectToPage("/Account/Manage/EnableAuthenticator");
-                        }
-                    }
-                    _logger.LogInformation("User logged in.");
-                    return LocalRedirect(returnUrl);
+				Microsoft.AspNetCore.Identity.SignInResult result;
+				if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
+				{
+					result = await _signInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
+				}
+				else
+				{
+					result = await _signInManager.PasswordSignInAsync(Input.Email, Input.Password, Input.RememberMe, lockoutOnFailure: false);
                 }
-					
-                if (result.RequiresTwoFactor)
+
+				if (result.Succeeded)
+				{
+					var userManager = _signInManager.UserManager;
+					var user = await userManager.FindByNameAsync(Input.Email);
+					if (user != null)
+					{
+						var isAdmin = await userManager.IsInRoleAsync(user, "Admin");
+						var is2faEnabled = await userManager.GetTwoFactorEnabledAsync(user);
+
+						if (isAdmin && !is2faEnabled)
+						{
+							return RedirectToPage("/Account/Manage/EnableAuthenticator");
+						}
+					}
+					_logger.LogInformation("User logged in.");
+					return LocalRedirect(returnUrl);
+				}
+
+				if (result.RequiresTwoFactor)
                 {
                     return RedirectToPage("./LoginWith2fa", new { ReturnUrl = returnUrl, RememberMe = Input.RememberMe });
                 }
@@ -143,12 +173,14 @@ namespace WebApp.Areas.Identity.Pages.Account
                 else
                 {
                     ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                    return Page();
+					Input.Passkey.CredentialJson = null;
+					ModelState.Remove("Input.Passkey.CredentialJson");
+					return Page();
                 }
             }
 
             // If we got this far, something failed, redisplay form
             return Page();
         }
-    }
+	}
 }

@@ -1,0 +1,115 @@
+﻿@page
+
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@model WebApp.Areas.Identity.Pages.Account.Manage.PasskeyAuthenticationModel
+@{
+    ViewData["Title"] = "Manage your passkeys";
+    ViewData["ActivePage"] = ManageNavPages.PasskeyAuthentication;
+}
+
+@using System.Buffers.Text
+
+<h3>Manage your passkeys</h3>
+
+<section id="passkey-status" aria-live="polite">
+    @if (!string.IsNullOrEmpty(Model.StatusMessage))
+    {
+        <div class="alert alert-info" role="alert">@Model.StatusMessage</div>
+    }
+</section>
+
+@if (Model.CurrentPasskeys is { Count: > 0 })
+{
+    <table class="table">
+        <tbody>
+            @foreach (var passkey in Model.CurrentPasskeys)
+            {
+                <tr>
+                    <td>@(passkey.Name ?? "Unnamed passkey")</td>
+                    <td>
+                        @{
+                            var credentialId = Base64Url.EncodeToString(passkey.CredentialId);
+                        }
+                        <form id="@($"update-passkey-{credentialId}")" asp-page-handler="UpdatePasskey" method="post">
+                            <AntiforgeryToken />
+                            <div>
+                                <input type="hidden" name="CredentialId" value="@credentialId" />
+                                @* <a id="update-passkey" asp-page="./PasskeyAuthentication/RenamePasskey" asp-route-id="" class="btn btn-primary">Rename</a> *@
+                                <button type="submit" name="Action" value="rename" class="btn btn-primary" title="Rename this passkey">Rename</button>
+                                <button type="submit" name="Action" value="delete" class="btn btn-danger" title="Remove this passkey from your account">Delete</button>
+                            </div>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No passkeys are registered.</p>
+}
+@if (Model.CurrentPasskeys != null && Model.CurrentPasskeys.Count >= Model.MaxPasskeyCount)
+{
+    <p class="text-danger">You have reached the maximum number of allowed passkeys. Please delete one before adding a new one.</p>
+}
+else
+{
+    <button id="link-add-passkey-button" type="submit" class="btn btn-primary" name="add-passkey" value="Add a new passkey" title="Add a new passkey to your account">Add Passkey</button>
+}
+
+@section Scripts {
+    <script>
+        document.getElementById('link-add-passkey-button').addEventListener('click', async () => {
+            const headers = {
+                'RequestVerificationToken': '@Antiforgery.GetAndStoreTokens(HttpContext).RequestToken',
+                'Content-Type': 'application/json'
+            };
+            try {
+                const credential = await createCredential(headers);
+
+                // Convert credential to a JSON-friendly object (ArrayBuffers converted inside toJSON)
+                const raw = credential && typeof credential.toJSON === 'function' ? credential.toJSON() : credential;
+
+                // Server expects a JSON payload with a `credentialJson` string
+                const payload = { credentialJson: JSON.stringify(raw) };
+
+                const response = await fetch('@Url.Page("/Account/Manage/PasskeyAuthentication","RegisterPasskey")', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                        const html = await response.text();
+                        document.open();  
+                        document.write(html);
+                        document.close();
+
+                        const url = new URL(response.url);
+                        const pathname = url.pathname;
+                        const credentialId = pathname.substring(pathname.lastIndexOf("/") + 1);
+
+                        history.pushState({ }, "", `/Identity/Account/Manage/RenamePasskey/${credentialId}`);
+
+                } else {
+                    const text = await response.text().catch(() => null);
+                    console.error('Register passkey failed:', response.status, text);
+                    alert('Failed to register passkey.');
+                }
+            } catch (error) {
+                console.error('Error during passkey registration:', error);
+                alert('An error occurred during passkey registration.');
+            }
+        });
+
+        async function createCredential(headers) {
+            const optionsResponse = await fetch('@Url.Page("/Account/Manage/PasskeyAuthentication", "PasskeyCreationOptions")', {
+                method: 'POST',
+                headers
+            });
+            const optionsJson = await optionsResponse.json();
+            const options = PublicKeyCredential.parseCreationOptionsFromJSON(optionsJson);
+            return await navigator.credentials.create({ publicKey: options });
+        }
+    </script>
+}

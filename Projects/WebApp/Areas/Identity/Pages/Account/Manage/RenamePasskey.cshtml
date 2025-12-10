@@ -1,0 +1,30 @@
+﻿@page "/Identity/Account/Manage/RenamePasskey/{id?}"
+@model WebApp.Areas.Identity.Pages.Account.Manage.RenamePasskeyModel
+@{
+    ViewData["Title"] = "Rename your passkeys";
+    ViewData["ActivePage"] = ManageNavPages.PasskeyAuthentication;
+}
+<form method="post">
+    @if (Model.Passkey?.Name is { } name)
+    {
+        <h4>Enter a new name for your "@name" passkey</h4>
+    }
+    else
+    {
+        <h4>Enter a name for your passkey</h4>
+    }
+    <hr />
+    <div asp-validation-summary="All" class="text-danger" role="alert"></div>
+    <div class="form-floating mb-3">
+        <input asp-for="Input.Name" id="Input.Name" class="form-control" aria-required="true" placeholder="My passkey" />
+        <label asp-for="Input.Name" class="form-label">Passkey name</label>
+        <span asp-validation-for="Input.Name" class="text-danger"></span>
+    </div>
+    <div>
+        <button type="submit" class="w-100 btn btn-lg btn-primary">Continue</button>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

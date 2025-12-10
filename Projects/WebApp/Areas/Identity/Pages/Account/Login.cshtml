@@ -1,5 +1,6 @@
 ﻿@page
 @model LoginModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 
 @{
     ViewData["Title"] = "Log in";
@@ -7,7 +8,7 @@
 
 <h1>@ViewData["Title"]</h1>
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-6">
         <section>
             <form id="account" method="post">
                 <h2>Use a local account to log in.</h2>
@@ -32,21 +33,35 @@
                 <div>
                     <button id="login-submit" type="submit" class="w-100 btn btn-lg btn-primary">Log in</button>
                 </div>
-                <div>
-                    <p>
-                        <a id="forgot-password" asp-page="./ForgotPassword">Forgot your password?</a>
-                    </p>
-                    <p>
-                        <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Register as a new user</a>
-                    </p>
-                    <p>
-                        <a id="resend-confirmation" asp-page="./ResendEmailConfirmation">Resend email confirmation</a>
-                    </p>
+
+                <div class="my-3">
+                   
                 </div>
+                <hr />
+                <div class="d-flex flex-column">
+                    <span class="text-secondary mx-auto mt-2">OR</span>
+                    <input type="hidden" asp-for="Input.Passkey.CredentialJson" />
+                    <input type="hidden" asp-for="Input.Passkey.Error" />
+                    <button id="start-login" class="btn btn-link mx-auto">Sign in with Passkey</button>
+                </div>
+                <hr />
             </form>
         </section>
+        <section>
+            <div>
+                <p>
+                    <a id="forgot-password" asp-page="./ForgotPassword">Forgot your password?</a>
+                </p>
+                <p>
+                    <a asp-page="./Register" asp-route-returnUrl="@Model.ReturnUrl">Register as a new user</a>
+                </p>
+                <p>
+                    <a id="resend-confirmation" asp-page="./ResendEmailConfirmation">Resend email confirmation</a>
+                </p>
+            </div>
+        </section>
     </div>
-    <div class="col-md-6 col-md-offset-2">
+    <div class="col-md-4">
         <section>
             <h3>Use another service to log in.</h3>
             <hr />
@@ -80,4 +95,31 @@
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        // serialize token to produce a safe JS string literal without HTML-encoding
+        const antiForgeryToken = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Antiforgery.GetAndStoreTokens(HttpContext).RequestToken));
+
+        document.getElementById('start-login').addEventListener('click', async (event) => {
+            event.preventDefault();
+            try {
+                const optionsResp = await fetch('@Url.Page("/Account/Login", "MakeAssertionOptions")', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'RequestVerificationToken': antiForgeryToken
+                    }
+                });
+                const optionsJson = await optionsResp.json();
+                const options = PublicKeyCredential.parseRequestOptionsFromJSON(optionsJson);
+                const assertion = await navigator.credentials.get({ publicKey: options });
+                
+                var passkeyInput = document.getElementById("Input_Passkey_CredentialJson");
+                passkeyInput.value = JSON.stringify(assertion);
+                document.querySelector('#account').submit();
+                passkeyInput.value = "";
+            } catch (ex) {
+                console.log(ex);
+            }
+        });
+    </script>
 }
