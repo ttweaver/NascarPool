@@ -55,8 +55,7 @@ builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSe
 
 builder.Services.Configure<IdentityPasskeyOptions>(options =>
 {
-	options.ServerDomain = "fastlapfantasy.net";
-	options.AuthenticatorTimeout = TimeSpan.FromMinutes(3);
+    options.AuthenticatorTimeout = TimeSpan.FromMinutes(3);
 	options.ChallengeSize = 64;
 });
 
