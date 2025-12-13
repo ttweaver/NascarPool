@@ -17,7 +17,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using WebApp.Models;
+using WebApp.Data;
 
 namespace WebApp.Areas.Identity.Pages.Account
 {
@@ -30,13 +32,15 @@ namespace WebApp.Areas.Identity.Pages.Account
         private readonly IUserEmailStore<ApplicationUser> _emailStore;
         private readonly IEmailSender _emailSender;
         private readonly ILogger<ExternalLoginModel> _logger;
+        private readonly ApplicationDbContext _context;
 
         public ExternalLoginModel(
             SignInManager<ApplicationUser> signInManager,
             UserManager<ApplicationUser> userManager,
             IUserStore<ApplicationUser> userStore,
             ILogger<ExternalLoginModel> logger,
-            IEmailSender emailSender)
+            IEmailSender emailSender,
+            ApplicationDbContext context)
         {
             _signInManager = signInManager;
             _userManager = userManager;
@@ -44,6 +48,7 @@ namespace WebApp.Areas.Identity.Pages.Account
             _emailStore = GetEmailStore();
             _logger = logger;
             _emailSender = emailSender;
+            _context = context;
         }
 
         /// <summary>
@@ -152,6 +157,19 @@ namespace WebApp.Areas.Identity.Pages.Account
 
             if (ModelState.IsValid)
             {
+                // Check AllowedUsers table for a matching email address
+                var allowed = await _context.Set<AllowedUsers>().FirstOrDefaultAsync(u =>
+                    u.Email.ToLower() == Input.Email.ToLower()
+                );
+
+                if (allowed == null)
+                {
+                    ModelState.AddModelError(string.Empty, "Registration is not allowed");
+                    ProviderDisplayName = info.ProviderDisplayName;
+                    ReturnUrl = returnUrl;
+                    return Page();
+                }
+
                 var user = CreateUser();
 
                 await _userStore.SetUserNameAsync(user, Input.Email, CancellationToken.None);
