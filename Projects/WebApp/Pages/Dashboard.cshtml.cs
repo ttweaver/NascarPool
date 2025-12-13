@@ -78,8 +78,10 @@ namespace WebApp.Pages
             OverallPlace = standings.FindIndex(s => s.UserId == UserId) + 1;
             TotalPoints = standings.FirstOrDefault(s => s.UserId == UserId)?.TotalPoints ?? 0;
 
+            var latestResultsRaceDate = _context.RaceResults.Max(rr => rr.Race.Date);
+
             var recentRace = await _context.Races
-                .Where(r => r.Pool.Id == currentSeason.Id && r.Date <= new DateTime(2026,2,15))
+                .Where(r => r.Pool.Id == currentSeason.Id && r.Date <= latestResultsRaceDate)
                 .OrderByDescending(r => r.Date)
                 .FirstOrDefaultAsync();
 

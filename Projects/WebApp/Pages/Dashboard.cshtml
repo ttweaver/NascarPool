@@ -215,7 +215,7 @@
                 @* Race selector: only show when there are races with results *@
                 @if (Model.RacesWithResults != null && Model.RacesWithResults.Any())
                 {
-                    var selectedRaceId = Model.RecentResults?.FirstOrDefault()?.Race?.Id ?? Model.RacesWithResults.First().Id;
+                    var selectedRaceId = Model.RecentResults?.OrderByDescending(rr => rr.Id).FirstOrDefault()?.Race?.Id ?? Model.RacesWithResults.First().Id;
                     <div class="mb-2 d-flex align-items-center">
                         <label for="raceSelect" class="me-2 mb-0">Race:</label>
                         <select id="raceSelect" class="form-select w-auto">
@@ -245,6 +245,19 @@
                     <div class="input-group">
                         <input type="text" id="searchDriver" class="form-control" placeholder="Search by driver name" oninput="filterResultsAndPaginate()" />
                     </div>
+                </div>
+
+                <!-- Page size selector -->
+                <div class="mb-3 d-flex align-items-center">
+                    <label for="pageSizeSelect" class="me-2 mb-0">Show:</label>
+                    <select id="pageSizeSelect" class="form-select w-auto">
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span class="ms-2">results per page</span>
                 </div>
 
                 <table class="table table-sm table-bordered mb-0" id="resultsTable">
@@ -297,10 +310,28 @@
 
 @section Scripts {
 <script>
-const pageSize = 10;
+let pageSize = 10;
 let currentPage = 1;
 let allRows = [];
 let filteredRows = [];
+
+// Cookie helper functions
+function setCookie(name, value, days) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+    document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
+}
+
+function getCookie(name) {
+    const nameEQ = name + '=';
+    const ca = document.cookie.split(';');
+    for (let i = 0; i < ca.length; i++) {
+        let c = ca[i];
+        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+    }
+    return null;
+}
 
 // return currently selected race id (string) or null
 function getSelectedRaceId() {
@@ -408,6 +439,27 @@ document.addEventListener('DOMContentLoaded', function() {
         allRows = Array.from(document.querySelectorAll('#resultsTable tbody tr'));
     }
 
+    // Load page size from cookie
+    const savedPageSize = getCookie('dashboardPageSize');
+    if (savedPageSize) {
+        pageSize = parseInt(savedPageSize, 10);
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        if (pageSizeSelect) {
+            pageSizeSelect.value = savedPageSize;
+        }
+    }
+
+    // Handle page size change
+    const pageSizeSelect = document.getElementById('pageSizeSelect');
+    if (pageSizeSelect) {
+        pageSizeSelect.addEventListener('change', function() {
+            pageSize = parseInt(this.value, 10);
+            setCookie('dashboardPageSize', pageSize, 365);
+            currentPage = 1;
+            renderPage();
+        });
+    }
+
     // Initialize race header and wire race select change
     const raceSelect = document.getElementById('raceSelect');
     if (raceSelect) {
@@ -418,9 +470,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    filteredRows = allRows;
-
-    renderPage();
+    // Perform initial filter based on selected race
+    filterResultsAndPaginate();
 
     const search = document.getElementById('searchDriver');
     if (search) {
