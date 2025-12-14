@@ -16,6 +16,8 @@
         <input asp-for="Pool.Year" class="form-control" type="number" min="1900" max="2100" />
         <span asp-validation-for="Pool.Year" class="text-danger"></span>
     </div>
-    <button type="submit" class="btn btn-primary">Save</button>
-    <a asp-page="Index" class="btn btn-secondary ms-2">Back to List</a>
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Save</button>
+        <a asp-page="Index" class="btn btn-secondary">Back to List</a>
+    </div>
 </form>
