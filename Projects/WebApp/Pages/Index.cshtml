@@ -4,7 +4,207 @@
     ViewData["Title"] = "Home page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<style>
+    .hero-section {
+        background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #d32f2f 100%);
+        padding: 80px 20px;
+        margin: -20px -15px 40px -15px;
+        position: relative;
+        overflow: hidden;
+        color: white;
+    }
+
+    .checkered-bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+            linear-gradient(45deg, rgba(0,0,0,.1) 25%, transparent 25%),
+            linear-gradient(-45deg, rgba(0,0,0,.1) 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, rgba(0,0,0,.1) 75%),
+            linear-gradient(-45deg, transparent 75%, rgba(0,0,0,.1) 75%);
+        background-size: 40px 40px;
+        background-position: 0 0, 0 20px, 20px -20px, -20px 0px;
+        opacity: 0.2;
+        animation: checkeredMove 2s linear infinite;
+    }
+
+    @@keyframes checkeredMove {
+        0% { background-position: 0 0, 0 20px, 20px -20px, -20px 0px; }
+        100% { background-position: 40px 0, 40px 20px, 60px -20px, 20px 0px; }
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: bold;
+        text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+        margin-bottom: 20px;
+        animation: fadeInDown 1s ease-out;
+    }
+
+    .hero-subtitle {
+        font-size: 1.5rem;
+        margin-bottom: 30px;
+        animation: fadeInUp 1s ease-out 0.3s both;
+    }
+
+    @@keyframes fadeInDown {
+        from {
+            opacity: 0;
+            transform: translateY(-30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .racing-flag {
+        display: inline-block;
+        font-size: 3rem;
+        animation: wave 1.5s ease-in-out infinite;
+        margin: 0 10px;
+    }
+
+    @@keyframes wave {
+        0%, 100% { transform: rotate(0deg); }
+        25% { transform: rotate(10deg); }
+        75% { transform: rotate(-10deg); }
+    }
+
+    .feature-card {
+        background: white;
+        border-radius: 10px;
+        padding: 30px;
+        margin: 20px 0;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-left: 5px solid #d32f2f;
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 12px rgba(0,0,0,0.2);
+    }
+
+    .feature-icon {
+        font-size: 3rem;
+        color: #d32f2f;
+        margin-bottom: 15px;
+    }
+
+    .race-car {
+        position: absolute;
+        bottom: 20px;
+        font-size: 2rem;
+        animation: race 8s linear infinite;
+        transform: scaleX(-1);
+    }
+
+    @@keyframes race {
+        0% { left: -100px; }
+        100% { left: 100%; }
+    }
+
+    .cta-button {
+        display: inline-block;
+        padding: 15px 40px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: white;
+        background: #d32f2f;
+        border: none;
+        border-radius: 50px;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
+        animation: pulse 2s ease-in-out infinite;
+    }
+
+    .cta-button:hover {
+        background: #b71c1c;
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(211, 47, 47, 0.6);
+        color: white;
+        text-decoration: none;
+    }
+
+    @@keyframes pulse {
+        0%, 100% { box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4); }
+        50% { box-shadow: 0 4px 25px rgba(211, 47, 47, 0.6); }
+    }
+
+    .racing-stripe {
+        height: 5px;
+        background: linear-gradient(90deg, #d32f2f 0%, #ffc107 50%, #2196f3 100%);
+        margin: 40px 0;
+        animation: stripeMove 3s linear infinite;
+    }
+
+    @@keyframes stripeMove {
+        0% { background-position: 0 0; }
+        100% { background-position: 100px 0; }
+    }
+</style>
+
+<div class="hero-section">
+    <div class="checkered-bg"></div>
+    <div class="hero-content text-center">
+        <h1 class="hero-title">
+            <span class="racing-flag">🏁</span>
+            NASCAR Pool
+            <span class="racing-flag">🏁</span>
+        </h1>
+        <p class="hero-subtitle">
+            Rev Your Engines! Pick Your Favorites and Compete for Glory!
+        </p>
+        <a href="/Races/Index" class="cta-button">View Races & Standings</a>
+    </div>
+    <div class="race-car">🏎️</div>
+</div>
+
+<div class="racing-stripe"></div>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="feature-card text-center">
+                <div class="feature-icon">🏆</div>
+                <h3>Compete</h3>
+                <p>Join the pool and compete against friends for the championship!</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card text-center">
+                <div class="feature-icon">🎯</div>
+                <h3>Pick Drivers</h3>
+                <p>Select your favorite drivers before each race and earn points based on their finish.</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="feature-card text-center">
+                <div class="feature-icon">📊</div>
+                <h3>Track Results</h3>
+                <p>Follow live standings and see how you stack up against the competition.</p>
+            </div>
+        </div>
+    </div>
 </div>
