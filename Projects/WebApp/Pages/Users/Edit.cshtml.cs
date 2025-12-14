@@ -7,13 +7,20 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace WebApp.Pages.Users
 {
     public class EditModel : PageModel
     {
         private readonly ApplicationDbContext _context;
-        public EditModel(ApplicationDbContext context) => _context = context;
+        private readonly ILogger<EditModel> _logger;
+
+        public EditModel(ApplicationDbContext context, ILogger<EditModel> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
 
         [BindProperty]
         public ApplicationUser User { get; set; } = default!;
@@ -23,48 +30,93 @@ namespace WebApp.Pages.Users
 
         public async Task<IActionResult> OnGetAsync(string id)
         {
-            if (string.IsNullOrEmpty(id)) return NotFound();
+            try
+            {
+                if (string.IsNullOrEmpty(id))
+                {
+                    _logger.LogWarning("Edit user attempted with null/empty ID");
+                    return NotFound();
+                }
 
-            User = await _context.Users
-                .Include(u => u.PrimaryDriverFirstHalf)
-                .Include(u => u.PrimaryDriverSecondHalf)
-                .FirstOrDefaultAsync(u => u.Id == id);
+                _logger.LogInformation("User {CurrentUser} accessing edit page for user ID {UserId}", 
+                    User?.UserName ?? "Anonymous", id);
 
-            if (User == null) return NotFound();
+                User = await _context.Users
+                    .Include(u => u.PrimaryDriverFirstHalf)
+                    .Include(u => u.PrimaryDriverSecondHalf)
+                    .FirstOrDefaultAsync(u => u.Id == id);
 
-            await PopulateDriverOptionsAsync();
-            return Page();
+                if (User == null)
+                {
+                    _logger.LogWarning("User not found with ID {UserId}", id);
+                    return NotFound();
+                }
+
+                await PopulateDriverOptionsAsync();
+                return Page();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading edit page for user ID {UserId}", id);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            // repopulate selects if we redisplay the page
-            await PopulateDriverOptionsAsync();
+            try
+            {
+                // repopulate selects if we redisplay the page
+                await PopulateDriverOptionsAsync();
 
-            ModelState.Remove("User.PrimaryDriverFirstHalf");
-            ModelState.Remove("User.PrimaryDriverSecondHalf");
-            ModelState.Remove("User.Password");
+                ModelState.Remove("User.PrimaryDriverFirstHalf");
+                ModelState.Remove("User.PrimaryDriverSecondHalf");
+                ModelState.Remove("User.Password");
 
-            if (!ModelState.IsValid) return Page();
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Edit user validation failed for user ID {UserId}", User.Id);
+                    return Page();
+                }
 
-            var existing = await _context.Users.FindAsync(User.Id);
-            if (existing == null) return NotFound();
+                var existing = await _context.Users.FindAsync(User.Id);
+                if (existing == null)
+                {
+                    _logger.LogWarning("User not found during update. User ID {UserId}", User.Id);
+                    return NotFound();
+                }
 
-            // update only editable fields
-            existing.UserName = User.UserName;
-            existing.FirstName = User.FirstName;
-            existing.LastName = User.LastName;
-            existing.IsPlayer = User.IsPlayer;
-            existing.Email = User.Email;
+                // Capture original values for logging
+                var originalEmail = existing.Email;
+                var originalFirstName = existing.FirstName;
+                var originalLastName = existing.LastName;
 
-            // update primary driver selections (nullable ints)
-            existing.PrimaryDriverFirstHalfId = User.PrimaryDriverFirstHalfId;
-            existing.PrimaryDriverSecondHalfId = User.PrimaryDriverSecondHalfId;
+                // update only editable fields
+                existing.UserName = User.UserName;
+                existing.FirstName = User.FirstName;
+                existing.LastName = User.LastName;
+                existing.IsPlayer = User.IsPlayer;
+                existing.Email = User.Email;
 
-            _context.Users.Update(existing);
-            await _context.SaveChangesAsync();
+                // update primary driver selections (nullable ints)
+                existing.PrimaryDriverFirstHalfId = User.PrimaryDriverFirstHalfId;
+                existing.PrimaryDriverSecondHalfId = User.PrimaryDriverSecondHalfId;
 
-            return RedirectToPage("Index");
+                _context.Users.Update(existing);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("User updated successfully. UserId: {UserId}, Email: {OldEmail} -> {NewEmail}, " +
+                    "Name: {OldFirstName} {OldLastName} -> {NewFirstName} {NewLastName}, UpdatedBy: {UpdatedBy}",
+                    User.Id, originalEmail, existing.Email, originalFirstName, originalLastName, 
+                    existing.FirstName, existing.LastName, User?.UserName ?? "Anonymous");
+
+                return RedirectToPage("Index");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user ID {UserId}", User.Id);
+                throw;
+            }
         }
 
         private async Task PopulateDriverOptionsAsync()
@@ -80,9 +132,6 @@ namespace WebApp.Pages.Users
                     Text = $"{d.Name} ({d.CarNumber})"
                 })
                 .ToList();
-
-            //// allow "none" option
-            //DriverOptions.Insert(0, new SelectListItem { Value = string.Empty, Text = "-- None --" });
         }
     }
 }
