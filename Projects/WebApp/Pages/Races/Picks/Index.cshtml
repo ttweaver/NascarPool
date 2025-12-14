@@ -1,84 +1,60 @@
 @page "{raceId:int}"
-@model WebApp.Pages.Races.Picks.PicksModel
-@using Microsoft.AspNetCore.Mvc.Rendering
+@model WebApp.Pages.Races.Picks.IndexModel
 @{
-    ViewData["Title"] = "Edit Picks";
+    ViewData["Title"] = "All Picks";
 }
-<h1>Edit Picks for @Model.Race?.Name (@Model.Race?.Date.ToShortDateString())</h1>
 
-<form method="post">
-    <input type="hidden" name="RaceId" value="@Model.RaceId" />
-    <table class="table table-bordered">
-        <thead>
-            <tr>
-                <th>Player</th>
-                <th>Pick 1</th>
-                <th>Pick 2</th>
-                <th>Pick 3</th>
-            </tr>
-        </thead>
-        <tbody>
-        @for (int i = 0; i < Model.Users.Count; i++)
-        {
-            var user = Model.Users[i];
-            var pick = Model.UserPicks.ContainsKey(user.Id) ? Model.UserPicks[user.Id] : null;
-            // Determine effective Pick1: existing pick if present, otherwise per-user default for this half
-            var effectivePick1 = pick?.Pick1Id ?? (Model.UserDefaultPick1.ContainsKey(user.Id) && Model.UserDefaultPick1[user.Id].HasValue ? Model.UserDefaultPick1[user.Id].Value : 0);
-            <tr>
-                <td>
-                    @user.FirstName @user.LastName
-                    <input type="hidden" name="UserIds" value="@user.Id" />
-                </td>
-                <td>
-                    <select class="form-select" name="Pick1Ids">
-                        <option value="">Select</option>
-                        @foreach (var driver in Model.Drivers)
-                        {
-                            var selected = effectivePick1 == driver.Id ? "selected" : "";
-                            <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">@driver.Name (@driver.CarNumber)
-                            </option>
-                        }
-                    </select>
-                </td>
-                <td>
-                    <select class="form-select" name="Pick2Ids">
-                        <option value="">Select</option>
-                        @foreach (var driver in Model.Drivers)
-                        {
-                            var selected = pick?.Pick2Id == driver.Id ? "selected" : "";
-                            <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">@driver.Name (@driver.CarNumber)
-                            </option>
-                        }
-                    </select>
-                </td>
-                <td>
-                    <select class="form-select" name="Pick3Ids">
-                        <option value="">Select</option>
-                        @foreach (var driver in Model.Drivers)
-                        {
-                            var selected = pick?.Pick3Id == driver.Id ? "selected" : "";
-                            <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">@driver.Name (@driver.CarNumber)
-                            </option>
-                        }
-                    </select>
-                </td>
-            </tr>
-        }
-        </tbody>
-    </table>
+<h1 class="mb-4">All Picks</h1>
 
-    <div class="mb-3">
-        <button type="submit" class="btn btn-success me-2">Save All Picks</button>
-        <a asp-page="/Races/Index" class="btn btn-secondary">Back to Races</a>
-    </div>
-</form>
-
-@if (!ViewData.ModelState.IsValid)
+@if (Model.Race == null)
 {
-    <div class="text-danger">
-        @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
-        {
-            <div>@error.ErrorMessage</div>
-        }
+    <div class="alert alert-danger">Race not found.</div>
+}
+else
+{
+    <div class="mb-4">
+        <h2 class="fs-5 fw-bold text-primary">@Model.Race.Name</h2>
+        <p class="text-muted mb-0">@Model.Race.Date.ToShortDateString()</p>
+        <p class="text-muted">@Model.Race.Pool?.Name (@Model.Race.Pool?.Year)</p>
+    </div>
+
+    @if (!Model.AllPlayerPicks.Any())
+    {
+        <div class="alert alert-info">No players found in this pool.</div>
+    }
+    else
+    {
+        <table class="table table-striped table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Player</th>
+                    <th>Primary Driver</th>
+                    <th>Pick 2</th>
+                    <th>Pick 3</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var playerPick in Model.AllPlayerPicks)
+                {
+                    <tr>
+                        <td class="fw-bold">@playerPick.PlayerName</td>
+                        @if (playerPick.HasPicks)
+                        {
+                            <td>@playerPick.Pick1Name (@playerPick.Pick1CarNumber)</td>
+                            <td>@playerPick.Pick2Name (@playerPick.Pick2CarNumber)</td>
+                            <td>@playerPick.Pick3Name (@playerPick.Pick3CarNumber)</td>
+                        }
+                        else
+                        {
+                            <td colspan="3" class="text-muted fst-italic">No picks entered</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <div class="mt-4">
+        <a asp-page="/Races/Index" class="btn btn-secondary">Back to Races</a>
     </div>
 }

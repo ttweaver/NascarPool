@@ -47,11 +47,19 @@ namespace WebApp.Pages.Races
         // CREATE
         public async Task<IActionResult> OnPostCreateAsync()
         {
+            if (!User.IsInRole("Admin"))
+            {
+                return Forbid();
+            }
+
             var name = Request.Form["CreateRaceName"];
             var dateStr = Request.Form["CreateRaceDate"];
+            var city = Request.Form["CreateRaceCity"];
+            var state = Request.Form["CreateRaceState"];
             var poolIdStr = Request.Form["PoolId"];
 
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(dateStr))
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(dateStr) || 
+                string.IsNullOrWhiteSpace(city) || string.IsNullOrWhiteSpace(state))
             {
                 ModelState.AddModelError(string.Empty, "All fields are required.");
                 await OnGetAsync();
@@ -96,6 +104,8 @@ namespace WebApp.Pages.Races
             {
                 Name = name,
                 Date = date,
+                City = city,
+                State = state,
                 PoolId = currentPool.Id
             };
 
@@ -107,14 +117,23 @@ namespace WebApp.Pages.Races
         // EDIT
         public async Task<IActionResult> OnPostEditAsync()
         {
-            var idStr = Request.Form["EditRaceId"];
+			if (!User.IsInRole("Admin"))
+			{
+				return Forbid();
+			}
+
+			var idStr = Request.Form["EditRaceId"];
             var name = Request.Form["EditRaceName"];
             var dateStr = Request.Form["EditRaceDate"];
+            var city = Request.Form["EditRaceCity"];
+            var state = Request.Form["EditRaceState"];
             var poolIdStr = Request.Form["EditRacePoolId"];
 
             if (!int.TryParse(idStr, out var id) ||
                 string.IsNullOrWhiteSpace(name) ||
                 string.IsNullOrWhiteSpace(dateStr) ||
+                string.IsNullOrWhiteSpace(city) ||
+                string.IsNullOrWhiteSpace(state) ||
                 string.IsNullOrWhiteSpace(poolIdStr))
             {
                 ModelState.AddModelError(string.Empty, "All fields are required.");
@@ -154,6 +173,8 @@ namespace WebApp.Pages.Races
 
             race.Name = name;
             race.Date = date;
+            race.City = city;
+            race.State = state;
             race.PoolId = poolId;
 
             _context.Races.Update(race);
@@ -164,7 +185,15 @@ namespace WebApp.Pages.Races
         // DELETE
         public async Task<IActionResult> OnPostDeleteAsync()
         {
-            var idStr = Request.Form["DeleteRaceId"];
+			if (!User.IsInRole("Admin"))
+			{
+				return Forbid();
+			}
+
+			var idStr = Request.Form["DeleteRaceId"];
+            var city = Request.Form["DeleteRaceCity"];
+            var state = Request.Form["DeleteRaceState"];
+
             if (!int.TryParse(idStr, out var id))
             {
                 ModelState.AddModelError(string.Empty, "Invalid race id.");
@@ -175,6 +204,17 @@ namespace WebApp.Pages.Races
             var race = await _context.Races.FindAsync(id);
             if (race != null)
             {
+                // Optional: Verify city and state match for additional safety
+                if (!string.IsNullOrWhiteSpace(city) && !string.IsNullOrWhiteSpace(state))
+                {
+                    if (race.City != city || race.State != state)
+                    {
+                        ModelState.AddModelError(string.Empty, "Race details do not match.");
+                        await OnGetAsync();
+                        return Page();
+                    }
+                }
+
                 _context.Races.Remove(race);
                 await _context.SaveChangesAsync();
             }

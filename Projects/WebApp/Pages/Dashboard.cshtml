@@ -1,4 +1,4 @@
-@page
+ï»¿@page
 @model WebApp.Pages.DashboardModel
 @{
     ViewData["Title"] = "Dashboard";
@@ -66,7 +66,7 @@
                 <h5 class="card-title">Picks for This Week</h5>
                 <div class="mb-2 text-muted">
                     @(Model.CurrentRace != null && !string.IsNullOrWhiteSpace(Model.CurrentRace.Name)
-                        ? $"{Model.CurrentRace.Name} — {Model.CurrentRace.Date.ToString("MMMM d, yyyy")}"
+                        ? $"{Model.CurrentRace.Name} â€” {Model.CurrentRace.Date.ToString("MMMM d, yyyy")}"
                         : "N/A")
                 </div>
 
@@ -86,7 +86,7 @@
                     @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
                     {
                         <div class="alert alert-warning mt-2 mb-2" role="alert">
-                            Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to change your picks.
+                            Hurry â€” only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to change your picks.
                         </div>
                     }
 
@@ -108,7 +108,7 @@
                     @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
                     {
                         <div class="alert alert-warning mt-2 mb-2" role="alert">
-                            Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to make your picks.
+                            Hurry â€” only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to make your picks.
                         </div>
                     }
 
@@ -210,99 +210,106 @@
     <div class="col-12 mb-3">
         <div class="card shadow-sm">
             <div class="card-body">
-                <h5 class="card-title">Most Recent Race Results</h5>
-
-                @* Race selector: only show when there are races with results *@
-                @if (Model.RacesWithResults != null && Model.RacesWithResults.Any())
-                {
-                    var selectedRaceId = Model.RecentResults?.OrderByDescending(rr => rr.Id).FirstOrDefault()?.Race?.Id ?? Model.RacesWithResults.First().Id;
-                    <div class="mb-2 d-flex align-items-center">
-                        <label for="raceSelect" class="me-2 mb-0">Race:</label>
-                        <select id="raceSelect" class="form-select w-auto">
-                            @foreach (var race in Model.RacesWithResults)
-                            {
-                                var optSelected = race.Id == selectedRaceId ? "selected" : "";
-                                <option value="@race.Id" data-name="@race.Name" data-date="@race.Date.ToString("MMMM d, yyyy")" selected="@(optSelected == "selected" ? "selected" : null)">
-                                    @race.Name — @race.Date.ToString("MMMM d, yyyy")
-                                </option>
-                            }
-                        </select>
-                    </div>
-                }
-                else
-                {
-                    <div class="mb-2 text-muted">
-                        @if (Model.RecentResults != null && Model.RecentResults.Any() && Model.RecentResults.FirstOrDefault()?.Race?.Name != null)
-                        {
-                            var recentRace = Model.RecentResults.FirstOrDefault().Race;
-                            @($"{recentRace.Name} — {recentRace.Date.ToString("MMMM d, yyyy")}")
-                        }
-                    </div>
-                }
-
-                <!-- Search by driver (client-side, instant) -->
-                <div class="mb-3">
-                    <div class="input-group">
-                        <input type="text" id="searchDriver" class="form-control" placeholder="Search by driver name" oninput="filterResultsAndPaginate()" />
-                    </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Most Recent Race Results</h5>
+                    <button class="btn btn-sm btn-outline-secondary" id="toggleResultsBtn" type="button" aria-expanded="true" aria-controls="raceResultsContent">
+                        <span id="toggleIcon">âˆ’</span>
+                    </button>
                 </div>
 
-                <!-- Page size selector -->
-                <div class="mb-3 d-flex align-items-center">
-                    <label for="pageSizeSelect" class="me-2 mb-0">Show:</label>
-                    <select id="pageSizeSelect" class="form-select w-auto">
-                        <option value="10">10</option>
-                        <option value="20">20</option>
-                        <option value="30">30</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                    <span class="ms-2">results per page</span>
-                </div>
-
-                <table class="table table-sm table-bordered mb-0" id="resultsTable">
-                    <thead>
-                        <tr>
-                            <th>Place</th>
-                            <th>Driver</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultsBody">
-                    @if (Model.AllRecentResults != null && Model.AllRecentResults.Any())
+                <div id="raceResultsContent" class="mt-3">
+                    @* Race selector: only show when there are races with results *@
+                    @if (Model.RacesWithResults != null && Model.RacesWithResults.Any())
                     {
-                        foreach (var result in Model.AllRecentResults)
-                        {
-                            <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
-                                <td>@result.Place</td>
-                                <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
-                            </tr>
-                        }
-                    }
-                    else if (Model.RecentResults != null && Model.RecentResults.Any())
-                    {
-                        foreach (var result in Model.RecentResults)
-                        {
-                            <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
-                                <td>@result.Place</td>
-                                <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
-                            </tr>
-                        }
+                        var selectedRaceId = Model.RecentResults?.OrderByDescending(rr => rr.Id).FirstOrDefault()?.Race?.Id ?? Model.RacesWithResults.First().Id;
+                        <div class="mb-2 d-flex align-items-center">
+                            <label for="raceSelect" class="me-2 mb-0">Race:</label>
+                            <select id="raceSelect" class="form-select w-auto">
+                                @foreach (var race in Model.RacesWithResults)
+                                {
+                                    var optSelected = race.Id == selectedRaceId ? "selected" : "";
+                                    <option value="@race.Id" data-name="@race.Name" data-date="@race.Date.ToString("MMMM d, yyyy")" selected="@(optSelected == "selected" ? "selected" : null)">
+                                        @race.Name â€” @race.Date.ToString("MMMM d, yyyy")
+                                    </option>
+                                }
+                            </select>
+                        </div>
                     }
                     else
                     {
-                        <tr>
-                            <td colspan="2" class="text-secondary">No recent results available.</td>
-                        </tr>
+                        <div class="mb-2 text-muted">
+                            @if (Model.RecentResults != null && Model.RecentResults.Any() && Model.RecentResults.FirstOrDefault()?.Race?.Name != null)
+                            {
+                                var recentRace = Model.RecentResults.FirstOrDefault().Race;
+                                @($"{recentRace.Name} â€” {recentRace.Date.ToString("MMMM d, yyyy")}")
+                            }
+                        </div>
                     }
-                    </tbody>
-                </table>
 
-                <!-- Pagination controls -->
-                <nav>
-                    <ul class="pagination justify-content-center" id="pagination">
-                        <!-- Pagination buttons will be rendered here by JS -->
-                    </ul>
-                </nav>
+                    <!-- Search by driver (client-side, instant) -->
+                    <div class="mb-3">
+                        <div class="input-group">
+                            <input type="text" id="searchDriver" class="form-control" placeholder="Search by driver name" oninput="filterResultsAndPaginate()" />
+                        </div>
+                    </div>
+
+                    <!-- Page size selector -->
+                    <div class="mb-3 d-flex align-items-center">
+                        <label for="pageSizeSelect" class="me-2 mb-0">Show:</label>
+                        <select id="pageSizeSelect" class="form-select w-auto">
+                            <option value="10">10</option>
+                            <option value="20">20</option>
+                            <option value="30">30</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                        </select>
+                        <span class="ms-2">results per page</span>
+                    </div>
+
+                    <table class="table table-sm table-bordered mb-0" id="resultsTable">
+                        <thead>
+                            <tr>
+                                <th>Place</th>
+                                <th>Driver</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultsBody">
+                        @if (Model.AllRecentResults != null && Model.AllRecentResults.Any())
+                        {
+                            foreach (var result in Model.AllRecentResults)
+                            {
+                                <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
+                                    <td>@result.Place</td>
+                                    <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
+                                </tr>
+                            }
+                        }
+                        else if (Model.RecentResults != null && Model.RecentResults.Any())
+                        {
+                            foreach (var result in Model.RecentResults)
+                            {
+                                <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
+                                    <td>@result.Place</td>
+                                    <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="2" class="text-secondary">No recent results available.</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination controls -->
+                    <nav>
+                        <ul class="pagination justify-content-center" id="pagination">
+                            <!-- Pagination buttons will be rendered here by JS -->
+                        </ul>
+                    </nav>
+                </div>
             </div>
         </div>
     </div>
@@ -432,6 +439,39 @@ function setupSelectEnable(selectId, buttonId) {
     });
 }
 
+// Toggle race results section with cookie persistence
+function setupRaceResultsToggle() {
+    const toggleBtn = document.getElementById('toggleResultsBtn');
+    const content = document.getElementById('raceResultsContent');
+    const toggleIcon = document.getElementById('toggleIcon');
+    
+    if (!toggleBtn || !content || !toggleIcon) return;
+
+    // Load saved state from cookie (default to expanded)
+    const savedState = getCookie('raceResultsExpanded');
+    const isExpanded = savedState === null ? true : savedState === 'true';
+
+    // Set initial state
+    if (!isExpanded) {
+        content.style.display = 'none';
+        toggleIcon.textContent = '+';
+        toggleBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    // Toggle on button click
+    toggleBtn.addEventListener('click', function() {
+        const currentlyExpanded = content.style.display !== 'none';
+        const newState = !currentlyExpanded;
+        
+        content.style.display = newState ? 'block' : 'none';
+        toggleIcon.textContent = newState ? 'âˆ’' : '+';
+        toggleBtn.setAttribute('aria-expanded', newState.toString());
+        
+        // Save state to cookie (365 days)
+        setCookie('raceResultsExpanded', newState.toString(), 365);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     allRows = Array.from(document.querySelectorAll('#resultsTable tbody tr[data-race-id]'));
     // If there are no rows with data-race-id, fall back to any rows (to preserve "No recent results" row)
@@ -469,6 +509,9 @@ document.addEventListener('DOMContentLoaded', function() {
             filterResultsAndPaginate();
         });
     }
+
+    // Setup race results toggle with cookie persistence
+    setupRaceResultsToggle();
 
     // Perform initial filter based on selected race
     filterResultsAndPaginate();

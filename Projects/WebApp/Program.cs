@@ -45,8 +45,13 @@ builder.Services.AddRazorPages(options =>
 {
 	options.Conventions.AuthorizeFolder("/Pools", "AdminPolicy");
     options.Conventions.AuthorizeFolder("/Drivers", "AdminPolicy");
-    options.Conventions.AuthorizeFolder("/Races", "AdminPolicy");
-    options.Conventions.AuthorizeFolder("/Standings", "AdminPolicy");
+    
+    options.Conventions.AuthorizeFolder("/Races")
+                       .AuthorizePage("/Races/Import", "AdminPolicy")
+                       .AuthorizePage("/Races/Picks/Edit", "AdminPolicy")
+                       .AuthorizePage("/Races/Results", "AdminPolicy");
+
+    
     options.Conventions.AuthorizeFolder("/Users", "AdminPolicy");
 });
 
