@@ -68,7 +68,6 @@ namespace WebApp.Areas.Identity.Pages.Account
             ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
             ///     directly from your code. This API may change or be removed in future releases.
             /// </summary>
-            [Required]
             [EmailAddress]
             public string Email { get; set; }
 
@@ -76,7 +75,6 @@ namespace WebApp.Areas.Identity.Pages.Account
             ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
             ///     directly from your code. This API may change or be removed in future releases.
             /// </summary>
-            [Required]
             [DataType(DataType.Password)]
             public string Password { get; set; }
 
@@ -125,6 +123,22 @@ namespace WebApp.Areas.Identity.Pages.Account
 
             ExternalLogins = (await _signInManager.GetExternalAuthenticationSchemesAsync()).ToList();
 
+			// Determine if this is a passkey or password login
+			bool isPasskeyLogin = !string.IsNullOrEmpty(Input.Passkey?.CredentialJson);
+
+			// Add conditional validation for email/password when NOT using passkey
+			if (!isPasskeyLogin)
+			{
+				if (string.IsNullOrEmpty(Input.Email))
+				{
+					ModelState.AddModelError(nameof(Input.Email), "The Email field is required.");
+				}
+				if (string.IsNullOrEmpty(Input.Password))
+				{
+					ModelState.AddModelError(nameof(Input.Password), "The Password field is required.");
+				}
+			}
+
             if (ModelState.IsValid)
             {
 				if (!string.IsNullOrEmpty(Input.Passkey?.Error))
@@ -134,7 +148,7 @@ namespace WebApp.Areas.Identity.Pages.Account
 				}
 
 				Microsoft.AspNetCore.Identity.SignInResult result;
-				if (!string.IsNullOrEmpty(Input.Passkey?.CredentialJson))
+				if (isPasskeyLogin)
 				{
 					result = await _signInManager.PasskeySignInAsync(Input.Passkey.CredentialJson);
 				}
@@ -146,7 +160,7 @@ namespace WebApp.Areas.Identity.Pages.Account
 				if (result.Succeeded)
 				{
 					var userManager = _signInManager.UserManager;
-					var user = await userManager.FindByNameAsync(Input.Email);
+					var user = isPasskeyLogin ? await userManager.GetUserAsync(User) : await userManager.FindByNameAsync(Input.Email);
 					if (user != null)
 					{
 						var isAdmin = await userManager.IsInRoleAsync(user, "Admin");

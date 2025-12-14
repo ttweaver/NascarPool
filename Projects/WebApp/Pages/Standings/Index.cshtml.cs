@@ -54,14 +54,16 @@ namespace WebApp.Pages.Standings
                 .OrderBy(s => s.TotalPoints)
                 .ToListAsync();
 
-            // Get usernames for display
+            // Get usernames for display - filter to only players
             var userIds = standingsQuery.Select(s => s.UserId).ToList();
             var users = await _context.Users
+                .Players()
                 .Where(u => userIds.Contains(u.Id))
                 .ToDictionaryAsync(u => u.Id, u => u.UserName);
 
             int place = 1;
             Standings = standingsQuery
+                .Where(s => users.ContainsKey(s.UserId))
                 .Select(s => new StandingEntry
                 {
                     UserId = s.UserId,
