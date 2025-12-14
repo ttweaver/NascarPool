@@ -18,42 +18,40 @@ builder.Services.AddDefaultIdentity<ApplicationUser>(options => {options.SignIn.
     .AddRoles<IdentityRole>()
 	.AddEntityFrameworkStores<ApplicationDbContext>();
 
-builder.Services.AddAuthorization(options =>
-{
-	options.AddPolicy("AdminPolicy", policy =>
+builder.Services.AddAuthorizationBuilder()
+	.AddPolicy("AdminPolicy", policy =>
 		policy.RequireRole("Admin"));
+
+builder.Services.AddRazorPages(options =>
+{
+	options.Conventions.AuthorizeFolder("/Pools", "AdminPolicy");
+	options.Conventions.AuthorizeFolder("/Drivers", "AdminPolicy");
+
+	options.Conventions.AuthorizeFolder("/Races")
+					   .AuthorizePage("/Races/Import", "AdminPolicy")
+					   .AuthorizePage("/Races/Picks/Edit", "AdminPolicy")
+					   .AuthorizePage("/Races/Results", "AdminPolicy");
+
+
+	options.Conventions.AuthorizeFolder("/Users", "AdminPolicy");
 });
 
 builder.Services.AddAuthentication()
     .AddGoogle(options =>
     {
-        options.ClientId = builder.Configuration["ConnectionStrings:Authentication:Google:ClientId"];
-        options.ClientSecret = builder.Configuration["ConnectionStrings:Authentication:Google:ClientSecret"];
-	})
+        options.ClientId = builder.Configuration["ConnectionStrings:Authentication:Google:ClientId"] ?? throw new InvalidOperationException("Google ClientId not found.");
+        options.ClientSecret = builder.Configuration["ConnectionStrings:Authentication:Google:ClientSecret"] ?? throw new InvalidOperationException("Google ClientSecret not found.");
+    })
     .AddFacebook(options =>
     {
-        options.AppId = builder.Configuration["ConnectionStrings:Authentication:Facebook:AppId"];
-        options.AppSecret = builder.Configuration["ConnectionStrings:Authentication:Facebook:AppSecret"];
-	})
-	.AddTwitter(options =>
+        options.AppId = builder.Configuration["ConnectionStrings:Authentication:Facebook:AppId"] ?? throw new InvalidOperationException("Facebook AppId not found.");
+        options.AppSecret = builder.Configuration["ConnectionStrings:Authentication:Facebook:AppSecret"] ?? throw new InvalidOperationException("Facebook AppSecret not found.");
+    })
+    .AddTwitter(options =>
     {
-        options.ConsumerKey = builder.Configuration["ConnectionStrings:Authentication:Twitter:ClientId"];
-        options.ConsumerSecret = builder.Configuration["ConnectionStrings:Authentication:Twitter:ClientSecret"];
-	});
-
-builder.Services.AddRazorPages(options =>
-{
-	options.Conventions.AuthorizeFolder("/Pools", "AdminPolicy");
-    options.Conventions.AuthorizeFolder("/Drivers", "AdminPolicy");
-    
-    options.Conventions.AuthorizeFolder("/Races")
-                       .AuthorizePage("/Races/Import", "AdminPolicy")
-                       .AuthorizePage("/Races/Picks/Edit", "AdminPolicy")
-                       .AuthorizePage("/Races/Results", "AdminPolicy");
-
-    
-    options.Conventions.AuthorizeFolder("/Users", "AdminPolicy");
-});
+        options.ConsumerKey = builder.Configuration["ConnectionStrings:Authentication:Twitter:ClientId"] ?? throw new InvalidOperationException("Twitter ClientId not found.");
+        options.ConsumerSecret = builder.Configuration["ConnectionStrings:Authentication:Twitter:ClientSecret"] ?? throw new InvalidOperationException("Twitter ClientSecret not found.");
+    });
 
 builder.Services.Configure<WebApp.Services.EmailSettings>(builder.Configuration.GetSection("ConnectionStrings:EmailSettings"));
 builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, WebApp.Services.EmailSender>();
