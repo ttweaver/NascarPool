@@ -12,7 +12,9 @@ public class Race
     [UsState]
     public string State { get; set; }
     [NotMapped]
-    public string Location => $"{City}, {State}";
+    public string Location => string.IsNullOrEmpty(City) || string.IsNullOrEmpty(State) 
+        ? $"{City}{State}" 
+        : $"{City}, {State}";
     public ICollection<Pick> Picks { get; set; }
     public ICollection<RaceResult> Results { get; set; }
     public int PoolId { get; set; }
