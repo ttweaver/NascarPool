@@ -7,13 +7,20 @@ using WebApp.Helpers;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace WebApp.Pages.Races
 {
     public class ResultsModel : PageModel
     {
         private readonly ApplicationDbContext _context;
-        public ResultsModel(ApplicationDbContext context) => _context = context;
+        private readonly ILogger<ResultsModel> _logger;
+
+        public ResultsModel(ApplicationDbContext context, ILogger<ResultsModel> logger)
+        {
+            _context = context;
+            _logger = logger;
+        }
 
         [BindProperty(SupportsGet = true)]
         public int RaceId { get; set; }
@@ -23,114 +30,270 @@ namespace WebApp.Pages.Races
 
         public async Task<IActionResult> OnGetAsync()
         {
-            Race = await _context.Races.Include(r => r.Pool).FirstOrDefaultAsync(r => r.Id == RaceId);
-            if (Race == null) return NotFound();
+            try
+            {
+                _logger.LogInformation("User {UserId} ({Email}) accessing race results page for race {RaceId}", 
+                    User.Identity?.Name ?? "Anonymous", User.Identity?.Name ?? "Anonymous", RaceId);
 
-            Drivers = await _context.Drivers
-                .Where(d => d.Pool.Id == Race.Pool.Id)
-                .OrderBy(d => d.CarNumber)
-                .ToListAsync();
+                Race = await _context.Races.Include(r => r.Pool).FirstOrDefaultAsync(r => r.Id == RaceId);
+                if (Race == null)
+                {
+                    _logger.LogWarning("Race not found during results page access. RaceId: {RaceId}, User: {UserId}", 
+                        RaceId, User.Identity?.Name ?? "Anonymous");
+                    return NotFound();
+                }
 
-            var results = await _context.RaceResults
-                .Where(r => r.RaceId == RaceId)
-                .ToListAsync();
+                Drivers = await _context.Drivers
+                    .Where(d => d.Pool.Id == Race.Pool.Id)
+                    .OrderBy(d => d.CarNumber)
+                    .ToListAsync();
 
-            DriverResults = results.ToDictionary(r => r.DriverId, r => r);
+                var results = await _context.RaceResults
+                    .Where(r => r.RaceId == RaceId)
+                    .ToListAsync();
 
-            return Page();
+                DriverResults = results.ToDictionary(r => r.DriverId, r => r);
+
+                _logger.LogInformation("Race results page loaded successfully. RaceId: {RaceId}, Race: {RaceName}, " +
+                    "DriverCount: {DriverCount}, ExistingResultCount: {ResultCount}", 
+                    RaceId, Race.Name, Drivers.Count, results.Count);
+
+                return Page();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading race results page for race {RaceId}", RaceId);
+                throw;
+            }
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            Race = await _context.Races.Include(r => r.Pool).FirstOrDefaultAsync(r => r.Id == RaceId);
-            if (Race == null) return NotFound();
-
-            Drivers = await _context.Drivers
-                .Where(d => d.Pool.Id == Race.Pool.Id)
-                .OrderBy(d => d.CarNumber)
-                .ToListAsync();
-
-            var driverIds = Request.Form["DriverIds"].ToArray();
-            var places = Request.Form["Places"].ToArray();
-
-            // Check for duplicate places and collect driver names for duplicates
-            var placeToDriverIds = new Dictionary<int, List<int>>();
-            for (int i = 0; i < places.Length; i++)
+            try
             {
-                if (int.TryParse(places[i], out var place) && place > 0)
+                var adminEmail = User.Identity?.Name ?? "Anonymous";
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+                _logger.LogInformation("User {AdminEmail} attempting to save race results for race {RaceId}, IP: {IpAddress}", 
+                    adminEmail, RaceId, ipAddress);
+
+                Race = await _context.Races.Include(r => r.Pool).FirstOrDefaultAsync(r => r.Id == RaceId);
+                if (Race == null)
                 {
-                    if (!placeToDriverIds.ContainsKey(place))
-                        placeToDriverIds[place] = new List<int>();
-                    if (int.TryParse(driverIds[i], out var driverId))
-                        placeToDriverIds[place].Add(driverId);
+                    _logger.LogWarning("Race not found during results save. RaceId: {RaceId}, User: {UserId}", 
+                        RaceId, adminEmail);
+                    return NotFound();
                 }
-            }
-            foreach (var kvp in placeToDriverIds.Where(p => p.Value.Count > 1))
-            {
-                var driverNames = kvp.Value
-                    .Select(id => Drivers.FirstOrDefault(d => d.Id == id)?.Name ?? $"DriverId {id}")
-                    .ToList();
-                ModelState.AddModelError(string.Empty, $"Duplicate place '{kvp.Key}' assigned to: {string.Join(", ", driverNames)}.");
-            }
 
-            // Save or update race results only if no duplicate places
-            if (ModelState.IsValid)
-            {
-                for (int i = 0; i < driverIds.Length; i++)
+                Drivers = await _context.Drivers
+                    .Where(d => d.Pool.Id == Race.Pool.Id)
+                    .OrderBy(d => d.CarNumber)
+                    .ToListAsync();
+
+                var driverIds = Request.Form["DriverIds"].ToArray();
+                var places = Request.Form["Places"].ToArray();
+
+                _logger.LogDebug("Processing {Count} race result entries for race {RaceId}", driverIds.Length, RaceId);
+
+                // Check for duplicate places and collect driver names for duplicates
+                var placeToDriverIds = new Dictionary<int, List<int>>();
+                for (int i = 0; i < places.Length; i++)
                 {
-                    if (!int.TryParse(driverIds[i], out var driverId)) continue;
-                    if (!int.TryParse(places[i], out var place) || place < 1)
+                    if (int.TryParse(places[i], out var place) && place > 0)
                     {
-                        ModelState.AddModelError(string.Empty, $"Invalid place for driver {Drivers.FirstOrDefault(d => d.Id == driverId)?.Name}.");
-                        continue;
+                        if (!placeToDriverIds.ContainsKey(place))
+                            placeToDriverIds[place] = new List<int>();
+                        if (int.TryParse(driverIds[i], out var driverId))
+                            placeToDriverIds[place].Add(driverId);
                     }
+                }
 
-                    var existingResult = await _context.RaceResults.FirstOrDefaultAsync(r => r.RaceId == RaceId && r.DriverId == driverId);
-                    if (existingResult != null)
+                foreach (var kvp in placeToDriverIds.Where(p => p.Value.Count > 1))
+                {
+                    var driverNames = kvp.Value
+                        .Select(id => Drivers.FirstOrDefault(d => d.Id == id)?.Name ?? $"DriverId {id}")
+                        .ToList();
+
+                    _logger.LogWarning("Race result validation failed - duplicate place. RaceId: {RaceId}, Place: {Place}, " +
+                        "Drivers: {Drivers}, User: {UserId}", 
+                        RaceId, kvp.Key, string.Join(", ", driverNames), adminEmail);
+
+                    ModelState.AddModelError(string.Empty, $"Duplicate place '{kvp.Key}' assigned to: {string.Join(", ", driverNames)}.");
+                }
+
+                int createdCount = 0;
+                int updatedCount = 0;
+                int skippedCount = 0;
+
+                // Save or update race results only if no duplicate places
+                if (ModelState.IsValid)
+                {
+                    for (int i = 0; i < driverIds.Length; i++)
                     {
-                        existingResult.Place = place;
-                        _context.RaceResults.Update(existingResult);
-                    }
-                    else
-                    {
-                        var result = new RaceResult
+                        if (!int.TryParse(driverIds[i], out var driverId))
                         {
-                            RaceId = RaceId,
-                            DriverId = driverId,
-                            Place = place
-                        };
-                        _context.RaceResults.Add(result);
+                            skippedCount++;
+                            continue;
+                        }
+
+                        if (!int.TryParse(places[i], out var place) || place < 1)
+                        {
+                            var driverName = Drivers.FirstOrDefault(d => d.Id == driverId)?.Name ?? $"DriverId {driverId}";
+                            _logger.LogWarning("Race result validation failed - invalid place. RaceId: {RaceId}, " +
+                                "Driver: {DriverName}, Place: {Place}, User: {UserId}", 
+                                RaceId, driverName, places[i], adminEmail);
+
+                            ModelState.AddModelError(string.Empty, $"Invalid place for driver {driverName}.");
+                            skippedCount++;
+                            continue;
+                        }
+
+                        var driver = Drivers.FirstOrDefault(d => d.Id == driverId);
+                        var driverInfo = driver != null ? $"{driver.Name} (#{driver.CarNumber})" : $"DriverId {driverId}";
+
+                        var existingResult = await _context.RaceResults.FirstOrDefaultAsync(r => r.RaceId == RaceId && r.DriverId == driverId);
+                        
+                        if (existingResult != null)
+                        {
+                            var oldPlace = existingResult.Place;
+                            existingResult.Place = place;
+                            _context.RaceResults.Update(existingResult);
+                            updatedCount++;
+
+                            _logger.LogInformation("Race result updated. ResultId: {ResultId}, RaceId: {RaceId}, Race: {RaceName}, " +
+                                "Driver: {DriverInfo}, Place: {OldPlace} -> {NewPlace}, User: {UserId}, IP: {IpAddress}", 
+                                existingResult.Id, RaceId, Race.Name, driverInfo, oldPlace, place, adminEmail, ipAddress);
+                        }
+                        else
+                        {
+                            var result = new RaceResult
+                            {
+                                RaceId = RaceId,
+                                DriverId = driverId,
+                                Place = place
+                            };
+                            _context.RaceResults.Add(result);
+                            createdCount++;
+
+                            _logger.LogInformation("Race result created. RaceId: {RaceId}, Race: {RaceName}, " +
+                                "Driver: {DriverInfo}, Place: {Place}, User: {UserId}, IP: {IpAddress}", 
+                                RaceId, Race.Name, driverInfo, place, adminEmail, ipAddress);
+                        }
                     }
                 }
-            }
 
-            if (!ModelState.IsValid)
+                if (!ModelState.IsValid)
+                {
+                    _logger.LogWarning("Race results save failed validation. RaceId: {RaceId}, " +
+                        "Created: {Created}, Updated: {Updated}, Skipped: {Skipped}, User: {UserId}", 
+                        RaceId, createdCount, updatedCount, skippedCount, adminEmail);
+
+                    var results = await _context.RaceResults.Where(r => r.RaceId == RaceId).ToListAsync();
+                    DriverResults = results.ToDictionary(r => r.DriverId, r => r);
+                    return Page();
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Race results saved successfully. RaceId: {RaceId}, Race: {RaceName}, " +
+                    "Created: {Created}, Updated: {Updated}, Skipped: {Skipped}, User: {UserId}, IP: {IpAddress}", 
+                    RaceId, Race.Name, createdCount, updatedCount, skippedCount, adminEmail, ipAddress);
+
+                // After saving results, update points for all picks related to this race
+                _logger.LogInformation("Starting pick points recalculation for race {RaceId}", RaceId);
+
+                var raceResults = await _context.RaceResults.Where(r => r.RaceId == RaceId).ToListAsync();
+                var picks = await _context.Picks.Where(p => p.RaceId == RaceId).ToListAsync();
+
+                int pickPointsUpdated = 0;
+                foreach (var pick in picks)
+                {
+                    var oldPoints = pick.Points;
+                    pick.CalculateTotalPoints(_context, raceResults);
+                    _context.Picks.Update(pick);
+
+                    if (oldPoints != pick.Points)
+                    {
+                        pickPointsUpdated++;
+                        _logger.LogDebug("Pick points recalculated. PickId: {PickId}, UserId: {UserId}, " +
+                            "RaceId: {RaceId}, Points: {OldPoints} -> {NewPoints}", 
+                            pick.Id, pick.UserId, RaceId, oldPoints, pick.Points);
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Pick points recalculation completed. RaceId: {RaceId}, " +
+                    "TotalPicks: {TotalPicks}, PicksWithPointChanges: {ChangedPicks}, User: {UserId}", 
+                    RaceId, picks.Count, pickPointsUpdated, adminEmail);
+
+                return RedirectToPage(new { raceId = RaceId });
+            }
+            catch (Exception ex)
             {
-                var results = await _context.RaceResults.Where(r => r.RaceId == RaceId).ToListAsync();
-                DriverResults = results.ToDictionary(r => r.DriverId, r => r);
-                return Page();
+                _logger.LogError(ex, "Error saving race results for race {RaceId}, User: {UserId}", 
+                    RaceId, User.Identity?.Name ?? "Anonymous");
+                throw;
             }
-
-            await _context.SaveChangesAsync();
-
-            // After saving results, update points for all picks related to this race
-            var raceResults = await _context.RaceResults.Where(r => r.RaceId == RaceId).ToListAsync();
-            var picks = await _context.Picks.Where(p => p.RaceId == RaceId).ToListAsync();
-            foreach (var pick in picks)
-            {
-                pick.CalculateTotalPoints(_context, raceResults);
-                _context.Picks.Update(pick);
-            }
-            await _context.SaveChangesAsync();
-
-            return RedirectToPage(new { raceId = RaceId });
         }
 
         public async Task<IActionResult> OnPostCalculatePointsAsync()
         {
-            await PickPointsCalculator.CalculateAllPicksPointsAsync(_context, RaceId);
-            await _context.SaveChangesAsync();
-            return RedirectToPage(new { raceId = RaceId });
+            try
+            {
+                var adminEmail = User.Identity?.Name ?? "Anonymous";
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+                _logger.LogInformation("User {AdminEmail} triggering manual points recalculation for race {RaceId}, IP: {IpAddress}", 
+                    adminEmail, RaceId, ipAddress);
+
+                var race = await _context.Races.FirstOrDefaultAsync(r => r.Id == RaceId);
+                if (race == null)
+                {
+                    _logger.LogWarning("Race not found during manual points calculation. RaceId: {RaceId}, User: {UserId}", 
+                        RaceId, adminEmail);
+                    return NotFound();
+                }
+
+                var picksBefore = await _context.Picks
+                    .Where(p => p.RaceId == RaceId)
+                    .Select(p => new { p.Id, p.UserId, p.Points })
+                    .ToListAsync();
+
+                await PickPointsCalculator.CalculateAllPicksPointsAsync(_context, RaceId);
+                await _context.SaveChangesAsync();
+
+                var picksAfter = await _context.Picks
+                    .Where(p => p.RaceId == RaceId)
+                    .Select(p => new { p.Id, p.UserId, p.Points })
+                    .ToListAsync();
+
+                int changedCount = 0;
+                foreach (var before in picksBefore)
+                {
+                    var after = picksAfter.FirstOrDefault(p => p.Id == before.Id);
+                    if (after != null && before.Points != after.Points)
+                    {
+                        changedCount++;
+                        _logger.LogDebug("Pick points changed during manual recalculation. PickId: {PickId}, " +
+                            "UserId: {UserId}, Points: {OldPoints} -> {NewPoints}", 
+                            before.Id, before.UserId, before.Points, after.Points);
+                    }
+                }
+
+                _logger.LogInformation("Manual points recalculation completed successfully. RaceId: {RaceId}, " +
+                    "Race: {RaceName}, TotalPicks: {TotalPicks}, PicksChanged: {ChangedPicks}, " +
+                    "User: {UserId}, IP: {IpAddress}", 
+                    RaceId, race.Name, picksBefore.Count, changedCount, adminEmail, ipAddress);
+
+                return RedirectToPage(new { raceId = RaceId });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during manual points recalculation for race {RaceId}, User: {UserId}", 
+                    RaceId, User.Identity?.Name ?? "Anonymous");
+                throw;
+            }
         }
     }
 }
