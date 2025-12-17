@@ -245,7 +245,10 @@ namespace WebApp.Pages.Races
                 .OrderByDescending(p => p.Year)
                 .ToListAsync();
 
-            PoolSelectList = new SelectList(pools, nameof(Pool.Id), nameof(Pool.Name));
+            PoolSelectList = new SelectList(
+                pools.Select(p => new { p.Id, DisplayName = $"{p.Name} ({p.Year})" }),
+                "Id",
+                "DisplayName");
 
 			if (!PoolId.HasValue)
 			{
