@@ -35,7 +35,7 @@ namespace WebApp.Pages.Drivers
 				.OrderByDescending(p => p.Year)
 				.ToListAsync();
 
-			var lastestPool = await _context.Pools.GetLatestPoolYearAsync();
+			var lastestPool = await Pools.GetLatestPoolYearAsync();
 			if (poolId.HasValue)
 			{
 				SelectedPoolId = poolId.Value;

@@ -1,11 +1,9 @@
-@page "{poolId:int?}"
+@page "{poolId?}"
 @model WebApp.Pages.Races.IndexModel
 @using Microsoft.AspNetCore.Mvc.Rendering
 @using WebApp.Helpers
 @{
     ViewData["Title"] = "Races";
-    var pools = Model.Pools.OrderByDescending(p => p.Year).ToList();
-    
 }
 <h1 class="mb-4">Races</h1>
 
@@ -13,14 +11,9 @@
     @if (User.IsInRole("Admin"))
     {
         <form method="get" class="d-flex align-items-center">
-            <label for="PoolId" class="form-label fs-5 fw-bold text-primary me-2 mb-0">Select Pool</label>
-            <select id="PoolId" name="poolId" class="form-select w-auto" onchange="this.form.submit()">
-                @foreach (var pool in pools)
-                {
-                    <option value="@pool.Id" selected="@(pool.Id == Model.SelectedPoolId ? "selected" : null)">
-                        @pool.Name (@pool.Year)
-                    </option>
-                }
+            <label asp-for="PoolId" class="form-label fs-5 fw-bold text-primary me-2 mb-0">Select Pool</label>
+            <select asp-for="PoolId" asp-items="Model.PoolSelectList" class="form-select w-auto" onchange="this.form.submit()">
+                <option value="">Select a pool...</option>
             </select>
         </form>
 
@@ -33,10 +26,9 @@
     {
         @if (Model.Races.Any())
         {
-            var selectedPool = pools.FirstOrDefault(p => p.Id == Model.SelectedPoolId);
-            if (selectedPool != null)
+            if (Model.LatestPool != null)
             {
-                <h2 class="fs-5 fw-bold text-primary mb-0">@selectedPool.Name (@selectedPool.Year)</h2>
+                <h2 class="fs-5 fw-bold text-primary mb-0">@Model.LatestPool.Name (@Model.LatestPool.Year)</h2>
             }
         }
     }
@@ -54,30 +46,34 @@
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
-                        <div asp-validation-summary="All" class="text-danger mb-2"></div>
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
                         <div class="mb-3">
-                            <label for="CreateRaceName" class="form-label">Name</label>
-                            <input type="text" class="form-control" id="CreateRaceName" name="CreateRaceName" required />
+                            <label asp-for="CreateInput.Name" class="form-label">Name</label>
+                            <input asp-for="CreateInput.Name" class="form-control" />
+                            <span asp-validation-for="CreateInput.Name" class="text-danger"></span>
                         </div>
                         <div class="mb-3">
-                            <label for="CreateRaceDate" class="form-label">Date</label>
-                            <input type="date" class="form-control" id="CreateRaceDate" name="CreateRaceDate" required />
+                            <label asp-for="CreateInput.Date" class="form-label">Date</label>
+                            <input asp-for="CreateInput.Date" class="form-control" />
+                            <span asp-validation-for="CreateInput.Date" class="text-danger"></span>
                         </div>
                         <div class="mb-3">
-                            <label for="CreateRaceCity" class="form-label">City</label>
-                            <input type="text" class="form-control" id="CreateRaceCity" name="CreateRaceCity" required />
+                            <label asp-for="CreateInput.City" class="form-label">City</label>
+                            <input asp-for="CreateInput.City" class="form-control" />
+                            <span asp-validation-for="CreateInput.City" class="text-danger"></span>
                         </div>
                         <div class="mb-3">
-                            <label for="CreateRaceState" class="form-label">State</label>
-                            <select class="form-select" id="CreateRaceState" name="CreateRaceState" required>
+                            <label asp-for="CreateInput.State" class="form-label">State</label>
+                            <select asp-for="CreateInput.State" class="form-select">
                                 <option value="">Select a state...</option>
                                 @foreach (var state in UsStates.StateList)
                                 {
                                     <option value="@state">@state</option>
                                 }
                             </select>
+                            <span asp-validation-for="CreateInput.State" class="text-danger"></span>
                         </div>
-                        <input type="hidden" name="PoolId" value="@Model.SelectedPoolId" />
+                        <input asp-for="CreateInput.PoolId" type="hidden" value="@Model.PoolId" />
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -93,33 +89,38 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <form method="post" asp-page-handler="Edit">
-                    <input type="hidden" id="EditRaceId" name="EditRaceId" />
+                    <input asp-for="EditInput.Id" type="hidden" />
                     <div class="modal-header">
                         <h5 class="modal-title" id="editRaceModalLabel">Edit Race</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
                         <div class="mb-3">
-                            <label for="EditRaceName" class="form-label">Name</label>
-                            <input type="text" class="form-control" id="EditRaceName" name="EditRaceName" required />
+                            <label asp-for="EditInput.Name" class="form-label">Name</label>
+                            <input asp-for="EditInput.Name" class="form-control" />
+                            <span asp-validation-for="EditInput.Name" class="text-danger"></span>
                         </div>
                         <div class="mb-3">
-                            <label for="EditRaceDate" class="form-label">Date</label>
-                            <input type="date" class="form-control" id="EditRaceDate" name="EditRaceDate" required />
+                            <label asp-for="EditInput.Date" class="form-label">Date</label>
+                            <input asp-for="EditInput.Date" class="form-control" />
+                            <span asp-validation-for="EditInput.Date" class="text-danger"></span>
                         </div>
                         <div class="mb-3">
-                            <label for="EditRaceCity" class="form-label">City</label>
-                            <input type="text" class="form-control" id="EditRaceCity" name="EditRaceCity" required />
+                            <label asp-for="EditInput.City" class="form-label">City</label>
+                            <input asp-for="EditInput.City" class="form-control" />
+                            <span asp-validation-for="EditInput.City" class="text-danger"></span>
                         </div>
                         <div class="mb-3">
-                            <label for="EditRaceState" class="form-label">State</label>
-                            <select class="form-select" id="EditRaceState" name="EditRaceState" required>
+                            <label asp-for="EditInput.State" class="form-label">State</label>
+                            <select asp-for="EditInput.State" class="form-select">
                                 <option value="">Select a state...</option>
                                 @foreach (var state in UsStates.StateList)
                                 {
                                     <option value="@state">@state</option>
                                 }
                             </select>
+                            <span asp-validation-for="EditInput.State" class="text-danger"></span>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -136,9 +137,9 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <form method="post" asp-page-handler="Delete">
-                    <input type="hidden" id="DeleteRaceId" name="DeleteRaceId" />
-                    <input type="hidden" id="DeleteRaceCity" name="DeleteRaceCity" />
-                    <input type="hidden" id="DeleteRaceState" name="DeleteRaceState" />
+                    <input asp-for="DeleteInput.Id" type="hidden" />
+                    <input asp-for="DeleteInput.City" type="hidden" />
+                    <input asp-for="DeleteInput.State" type="hidden" />
                     <div class="modal-header">
                         <h5 class="modal-title" id="deleteRaceModalLabel">Delete Race</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -252,11 +253,6 @@
     </tbody>
 </table>
 
-@if (!ViewData.ModelState.IsValid && Request.Method == "POST" && Request.Form["CreateRaceName"].Count > 0)
-{
-    <span id="showCreateModal"></span>
-}
-
 @section Scripts {
 <script>
     @if (User.IsInRole("Admin"))
@@ -266,40 +262,41 @@
         var editRaceModal = document.getElementById('editRaceModal');
         editRaceModal.addEventListener('show.bs.modal', function (event) {
             var button = event.relatedTarget;
-            document.getElementById('EditRaceId').value = button.getAttribute('data-race-id');
-            document.getElementById('EditRaceName').value = button.getAttribute('data-race-name');
-            document.getElementById('EditRaceDate').value = button.getAttribute('data-race-date');
-            document.getElementById('EditRaceCity').value = button.getAttribute('data-race-city');
-            document.getElementById('EditRaceState').value = button.getAttribute('data-race-state');
+            document.getElementById('EditInput_Id').value = button.getAttribute('data-race-id');
+            document.getElementById('EditInput_Name').value = button.getAttribute('data-race-name');
+            document.getElementById('EditInput_Date').value = button.getAttribute('data-race-date');
+            document.getElementById('EditInput_City').value = button.getAttribute('data-race-city');
+            document.getElementById('EditInput_State').value = button.getAttribute('data-race-state');
         });
 
         // Delete modal population
         var deleteRaceModal = document.getElementById('deleteRaceModal');
         deleteRaceModal.addEventListener('show.bs.modal', function (event) {
             var button = event.relatedTarget;
-            document.getElementById('DeleteRaceId').value = button.getAttribute('data-race-id');
+            document.getElementById('DeleteInput_Id').value = button.getAttribute('data-race-id');
             document.getElementById('DeleteRaceName').textContent = button.getAttribute('data-race-name');
-            document.getElementById('DeleteRaceCity').value = button.getAttribute('data-race-city');
-            document.getElementById('DeleteRaceState').value = button.getAttribute('data-race-state');
+            document.getElementById('DeleteInput_City').value = button.getAttribute('data-race-city');
+            document.getElementById('DeleteInput_State').value = button.getAttribute('data-race-state');
             document.getElementById('DeleteRaceLocation').textContent = button.getAttribute('data-race-location');
         });
 
+        // Show modal on validation error
         window.addEventListener('DOMContentLoaded', function () {
-            if (document.getElementById('showCreateModal')) {
-                var createModal = new bootstrap.Modal(document.getElementById('createRaceModal'));
-                createModal.show();
-            }
-        });
-        </text>
-    }
-
-    @if (User.IsInRole("Admin"))
-    {
-        <text>
-        window.addEventListener('DOMContentLoaded', function () {
-            if (document.getElementById('showCreateModal')) {
-                var createModal = new bootstrap.Modal(document.getElementById('createRaceModal'));
-                createModal.show();
+            var activeModal = '@Model.ActiveModal';
+            if (activeModal) {
+                var modalElement = null;
+                if (activeModal === 'create') {
+                    modalElement = document.getElementById('createRaceModal');
+                } else if (activeModal === 'edit') {
+                    modalElement = document.getElementById('editRaceModal');
+                } else if (activeModal === 'delete') {
+                    modalElement = document.getElementById('deleteRaceModal');
+                }
+                
+                if (modalElement) {
+                    var modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+                }
             }
         });
         </text>

@@ -29,14 +29,13 @@ namespace WebApp.Data
         /// Asynchronously returns the latest pool year from the provided queryable.
         /// Returns 0 when the sequence is empty.
         /// </summary>
-        public static async Task<Pool> GetLatestPoolYearAsync(this IQueryable<Pool> pools, CancellationToken cancellationToken = default)
+        public static async Task<Pool> GetLatestPoolYearAsync(this IList<Pool> pools, CancellationToken cancellationToken = default)
         {
             if (pools is null) throw new ArgumentNullException(nameof(pools));
 
-            return await pools
+            return pools
                 .OrderByDescending(p => p.Year)
-                .FirstOrDefaultAsync(cancellationToken)
-                .ConfigureAwait(false);
+                .FirstOrDefault();
         }
     }
 }
