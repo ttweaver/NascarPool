@@ -80,7 +80,7 @@ namespace WebApp.Pages
                 TotalRaces = seasonRaceIds.Count;
 
                 var standings = await _context.Picks
-                    .Where(p => seasonRaceIds.Contains(p.RaceId))
+                    .Where(p => seasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer)
                     .GroupBy(p => p.UserId)
                     .Select(g => new { UserId = g.Key, TotalPoints = g.Sum(p => p.Points) })
                     .OrderBy(s => s.TotalPoints)
@@ -259,6 +259,66 @@ namespace WebApp.Pages
 
                 _logger.LogInformation("User {UserId} ({Email}) attempting to set primary driver ({HalfType}). DriverId: {DriverId}, IP: {IpAddress}", 
                     UserId, User.Identity?.Name ?? "Anonymous", halfType, driverId, ipAddress);
+
+                // Validate timing restrictions
+                var currentSeason = await _context.Pools
+                    .OrderByDescending(p => p.Year)
+                    .FirstOrDefaultAsync();
+
+                if (currentSeason == null)
+                {
+                    _logger.LogWarning("No current season found for user {UserId} attempting to set primary driver", UserId);
+                    ModelState.AddModelError(string.Empty, "No active season found.");
+                    await OnGetAsync();
+                    return Page();
+                }
+
+                if (setSecondHalf)
+                {
+                    // Get the second half first race
+                    var seasonRaces = await _context.Races
+                        .Where(r => r.PoolId == currentSeason.Id)
+                        .OrderBy(r => r.Date)
+                        .ToListAsync();
+
+                    if (seasonRaces.Any())
+                    {
+                        int midpointIndex = seasonRaces.Count / 2;
+                        var secondHalfFirstRace = seasonRaces.ElementAtOrDefault(midpointIndex);
+
+                        if (secondHalfFirstRace != null && secondHalfFirstRace.Date <= DateTime.Today)
+                        {
+                            _logger.LogWarning("User {UserId} attempted to set second half primary driver after cutoff date. " +
+                                "SecondHalfFirstRaceDate: {RaceDate}, Today: {Today}, IP: {IpAddress}", 
+                                UserId, secondHalfFirstRace.Date, DateTime.Today, ipAddress);
+                            ModelState.AddModelError(string.Empty, 
+                                $"The deadline to set your second half primary driver has passed. " +
+                                $"Changes must be made before {secondHalfFirstRace.Date:MMMM d, yyyy}.");
+                            await OnGetAsync();
+                            return Page();
+                        }
+                    }
+                }
+                else
+                {
+                    // Get the first race of the season
+                    var firstRace = await _context.Races
+                        .Where(r => r.PoolId == currentSeason.Id)
+                        .OrderBy(r => r.Date)
+                        .FirstOrDefaultAsync();
+
+                    if (firstRace != null && firstRace.Date <= DateTime.Today)
+                    {
+                        _logger.LogWarning("User {UserId} attempted to set first half primary driver after cutoff date. " +
+                            "FirstRaceDate: {RaceDate}, Today: {Today}, IP: {IpAddress}", 
+                            UserId, firstRace.Date, DateTime.Today, ipAddress);
+                        ModelState.AddModelError(string.Empty, 
+                            $"The deadline to set your first half primary driver has passed. " +
+                            $"Changes must be made before {firstRace.Date:MMMM d, yyyy}.");
+                        await OnGetAsync();
+                        return Page();
+                    }
+                }
 
                 var (user, selectedDriver, errorResult) = await TryGetUserAndDriverAsync(driverId);
                 if (errorResult != null)

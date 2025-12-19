@@ -1,4 +1,4 @@
-@page
+﻿@page
 @model WebApp.Pages.Standings.IndexModel
 @{
     ViewData["Title"] = "Season Standings";
@@ -11,27 +11,229 @@
 }
 else
 {
-    <table class="table table-bordered table-striped">
-        <thead>
-            <tr>
-                <th>Place</th>
-                <th>User</th>
-                <th>Total Points</th>
-            </tr>
-        </thead>
-        <tbody>
-        @foreach (var entry in Model.Standings)
-        {
-            <tr>
-                <td>@entry.Place</td>
-                <td>@entry.UserName</td>
-                <td>@entry.TotalPoints</td>
-            </tr>
+    @if (!string.IsNullOrEmpty(Model.CurrentUserEncouragementMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <strong>@Model.CurrentUserEncouragementMessage</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <style>
+        .current-user-row {
+            background-color: #fff3cd !important;
+            border-left: 4px solid #ffc107;
+            font-weight: 600;
         }
-        </tbody>
-    </table>
+        .you-are-here-badge {
+            display: inline-block;
+            margin-left: 10px;
+            color: #856404;
+            font-size: 0.9em;
+            font-style: italic;
+        }
+    </style>
+
+    <div class="row">
+        <div class="col-lg-5 col-md-12 mb-4">
+            <div class="card h-100">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        Current Standings 
+                        @if (Model.CurrentWeekNumber > 0)
+                        {
+                            <span class="badge bg-primary ms-2">Week @Model.CurrentWeekNumber</span>
+                        }
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Place</th>
+                                    <th>Player</th>
+                                    <th>Total Points</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            @foreach (var entry in Model.Standings)
+                            {
+                                var isCurrentUser = entry.UserId == User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                                <tr class="@(isCurrentUser ? "current-user-row" : "")">
+                                    <td>@entry.Place</td>
+                                    <td>
+                                        @entry.FirstName @entry.LastName
+                                        @if (isCurrentUser)
+                                        {
+                                            <span class="you-are-here-badge">← You are here</span>
+                                        }
+                                    </td>
+                                    <td>@entry.TotalPoints</td>
+                                </tr>
+                            }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.HasWeeklyPerformance)
+        {
+            <div class="col-lg-7 col-md-12 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
+                        <h5 class="mb-0">Weekly Performance Chart</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="chartLoadingSpinner" class="text-center my-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading chart...</span>
+                            </div>
+                        </div>
+                        <canvas id="performanceChart" style="max-height: 500px; display: none;"></canvas>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 
     <p>
         <a asp-page="/Dashboard" class="btn btn-secondary">Back to Dashboard</a>
     </p>
+}
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        @if (Model.HasWeeklyPerformance)
+        {
+            <text>
+            (async function() {
+                try {
+                    // Fetch chart data from server
+                    const response = await fetch('@Url.Page("/Standings/Index", "ChartData")');
+                    if (!response.ok) {
+                        throw new Error('Failed to load chart data');
+                    }
+                    
+                    const data = await response.json();
+                    const weeklyData = data.weeklyData;
+                    const players = data.players;
+                    const currentUserId = data.currentUserId;
+                    
+                    if (!weeklyData || weeklyData.length === 0) {
+                        document.getElementById('chartLoadingSpinner').innerHTML = 
+                            '<div class="alert alert-info">No race data available yet.</div>';
+                        return;
+                    }
+                    
+                    // Hide spinner and show chart
+                    document.getElementById('chartLoadingSpinner').style.display = 'none';
+                    document.getElementById('performanceChart').style.display = 'block';
+                    document.getElementById('chartNote').style.display = 'block';
+                    
+                    // Create datasets for each player
+                    const datasets = players.map((player, index) => {
+                        const isCurrentUser = player.userId === currentUserId;
+                        const playerData = weeklyData.map(week => {
+                            return {
+                                x: week.weekNumber,
+                                y: week.playerPlaces[player.userId] || null
+                            };
+                        });
+
+                        // Generate distinct colors for each player
+                        const hue = (index * 360 / players.length) % 360;
+                        const color = isCurrentUser 
+                            ? 'rgb(255, 193, 7)' // Highlight current user in gold
+                            : `hsl(${hue}, 70%, 50%)`;
+                        
+                        return {
+                            label: `${player.firstName} ${player.lastName}`,
+                            data: playerData,
+                            borderColor: color,
+                            backgroundColor: color,
+                            borderWidth: isCurrentUser ? 4 : 2,
+                            pointRadius: isCurrentUser ? 6 : 4,
+                            pointHoverRadius: isCurrentUser ? 8 : 6,
+                            tension: 0.2,
+                            hidden: !isCurrentUser && players.length > 10 // Hide non-current users if too many players
+                        };
+                    });
+
+                    // Get week labels
+                    const weekLabels = weeklyData.map(w => `Week ${w.weekNumber}`);
+
+                    // Create chart
+                    const ctx = document.getElementById('performanceChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: weekLabels,
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'bottom',
+                                    labels: {
+                                        usePointStyle: true,
+                                        padding: 15,
+                                        font: {
+                                            size: 11
+                                        }
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const place = context.parsed.y;
+                                            const suffix = place === 1 ? 'st' : place === 2 ? 'nd' : place === 3 ? 'rd' : 'th';
+                                            return `${context.dataset.label}: ${place}${suffix} place`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Week Number'
+                                    }
+                                },
+                                y: {
+                                    reverse: true, // Lower place (1st) should be at the top
+                                    title: {
+                                        display: true,
+                                        text: 'Finishing Position'
+                                    },
+                                    ticks: {
+                                        stepSize: 1,
+                                        callback: function(value) {
+                                            const suffix = value === 1 ? 'st' : value === 2 ? 'nd' : value === 3 ? 'rd' : 'th';
+                                            return `${value}${suffix}`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } catch (error) {
+                    console.error('Error loading chart:', error);
+                    document.getElementById('chartLoadingSpinner').innerHTML = 
+                        '<div class="alert alert-danger">Failed to load chart data. Please refresh the page.</div>';
+                }
+            })();
+            </text>
+        }
+    </script>
 }

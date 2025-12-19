@@ -1,15 +1,27 @@
-@page "{raceId:int}"
+﻿@page "{raceId:int}"
 @model WebApp.Pages.Races.ViewResultsModel
 @{
     ViewData["Title"] = "Race Results";
 }
 <h1>Results for @Model.Race?.Name (@Model.Race?.Date.ToShortDateString())</h1>
 
+@if (Model.CurrentUserPlace.HasValue)
+{
+    var place = Model.CurrentUserPlace.Value;
+    var totalPlayers = Model.TotalPlayers;
+    string message = GetEncouragingMessage(place, totalPlayers);
+    string alertClass = GetAlertClass(place, totalPlayers);
+    
+    <div class="alert @alertClass" role="alert">
+        <strong>Your Performance:</strong> You finished in <strong>@place@GetPlaceSuffix(place)</strong> place out of @totalPlayers players. @message
+    </div>
+}
+
 <table class="table table-bordered">
     <thead>
         <tr>
             <th>Place</th>
-            <th>User</th>
+            <th>Player</th>
             <th>Total Points</th>
         </tr>
     </thead>
@@ -17,9 +29,13 @@
     @for (int i = 0; i < Model.RankedResults.Count; i++)
     {
         var result = Model.RankedResults[i];
-        <tr>
-            <td>@(i + 1)</td>
-            <td>@result.UserName</td>
+        var place = i + 1;
+        var isCurrentUser = User.Identity?.IsAuthenticated == true && result.UserName == User.Identity.Name;
+        var rowClass = isCurrentUser ? "table-primary" : "";
+        
+        <tr class="@rowClass">
+            <td>@place</td>
+            <td>@result.UserName @(isCurrentUser ? "(You)" : "")</td>
             <td>@result.Points</td>
         </tr>
     }
@@ -28,3 +44,41 @@
 <div class="mb-3">
     <a href="javascript:history.back()" class="btn btn-secondary">Back</a>
 </div>
+
+@functions {
+    string GetEncouragingMessage(int place, int totalPlayers)
+    {
+        return place switch
+        {
+            1 => "🏆 Champion! Outstanding performance!",
+            2 => "🥈 Excellent! So close to the top!",
+            3 => "🥉 Great job! Podium finish!",
+            _ when place <= totalPlayers * 0.25 => "⭐ Top tier! Keep up the great work!",
+            _ when place <= totalPlayers * 0.50 => "👍 Solid performance! You're in the hunt!",
+            _ when place <= totalPlayers * 0.75 => "💪 Good effort! Room to climb!",
+            _ => "🎯 Keep racing! Every race is a new opportunity!"
+        };
+    }
+    
+    string GetAlertClass(int place, int totalPlayers)
+    {
+        return place switch
+        {
+            1 => "alert-warning",
+            2 or 3 => "alert-info",
+            _ when place <= totalPlayers * 0.50 => "alert-success",
+            _ => "alert-secondary"
+        };
+    }
+
+    string GetPlaceSuffix(int place)
+    {
+        return place switch
+        {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th"
+        };
+    }
+}

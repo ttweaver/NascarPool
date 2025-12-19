@@ -6,7 +6,7 @@
 }
 <h1>Edit Picks for @Model.Race?.Name (@Model.Race?.Date.ToShortDateString())</h1>
 
-<form method="post">
+<form method="post" id="picksForm">
     <input type="hidden" name="RaceId" value="@Model.RaceId" />
     <table class="table table-bordered">
         <thead>
@@ -24,13 +24,16 @@
             var pick = Model.UserPicks.ContainsKey(user.Id) ? Model.UserPicks[user.Id] : null;
             // Determine effective Pick1: existing pick if present, otherwise per-user default for this half
             var effectivePick1 = pick?.Pick1Id ?? (Model.UserDefaultPick1.ContainsKey(user.Id) && Model.UserDefaultPick1[user.Id].HasValue ? Model.UserDefaultPick1[user.Id].Value : 0);
-            <tr>
+            <tr data-row-index="@i">
                 <td>
                     @user.FirstName @user.LastName
                     <input type="hidden" name="UserIds" value="@user.Id" />
+                    <div class="duplicate-warning" style="display:none; color: #dc3545; font-size: 0.875rem; margin-top: 0.25rem;">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Duplicate pick detected
+                    </div>
                 </td>
                 <td>
-                    <select class="form-select" name="Pick1Ids">
+                    <select class="form-select pick-select" name="Pick1Ids" data-pick-type="1">
                         <option value="">Select</option>
                         @foreach (var driver in Model.Drivers)
                         {
@@ -41,7 +44,7 @@
                     </select>
                 </td>
                 <td>
-                    <select class="form-select" name="Pick2Ids">
+                    <select class="form-select pick-select" name="Pick2Ids" data-pick-type="2">
                         <option value="">Select</option>
                         @foreach (var driver in Model.Drivers)
                         {
@@ -52,7 +55,7 @@
                     </select>
                 </td>
                 <td>
-                    <select class="form-select" name="Pick3Ids">
+                    <select class="form-select pick-select" name="Pick3Ids" data-pick-type="3">
                         <option value="">Select</option>
                         @foreach (var driver in Model.Drivers)
                         {
@@ -68,8 +71,12 @@
     </table>
 
     <div class="mb-3">
-        <button type="submit" class="btn btn-success me-2">Save All Picks</button>
+        <button type="submit" class="btn btn-success me-2" id="submitBtn">Save All Picks</button>
         <a asp-page="/Races/Index" class="btn btn-secondary">Back to Races</a>
+    </div>
+    
+    <div id="formError" class="alert alert-danger" style="display:none;" role="alert">
+        <i class="bi bi-exclamation-circle-fill"></i> Cannot save: One or more players have duplicate picks. Please correct the highlighted rows before submitting.
     </div>
 </form>
 
@@ -82,3 +89,90 @@
         }
     </div>
 }
+
+<style>
+    tr.has-duplicate {
+        background-color: #fff3cd !important;
+        border-left: 4px solid #ffc107;
+    }
+    
+    tr.has-duplicate select.has-duplicate-pick {
+        border-color: #dc3545;
+        background-color: #fff5f5;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const pickSelects = document.querySelectorAll('.pick-select');
+        const form = document.getElementById('picksForm');
+        const formError = document.getElementById('formError');
+        
+        function checkForDuplicates() {
+            let hasDuplicates = false;
+            
+            // Clear all previous warnings
+            document.querySelectorAll('tr[data-row-index]').forEach(row => {
+                row.classList.remove('has-duplicate');
+                row.querySelector('.duplicate-warning').style.display = 'none';
+            });
+            
+            document.querySelectorAll('.pick-select').forEach(select => {
+                select.classList.remove('has-duplicate-pick');
+            });
+            
+            // Check each row for duplicate picks within that player's selections
+            document.querySelectorAll('tr[data-row-index]').forEach(row => {
+                const selects = row.querySelectorAll('.pick-select');
+                const picks = Array.from(selects).map(s => s.value).filter(v => v !== '');
+                const hasDuplicate = picks.length !== new Set(picks).size;
+                
+                if (hasDuplicate) {
+                    hasDuplicates = true;
+                    row.classList.add('has-duplicate');
+                    row.querySelector('.duplicate-warning').style.display = 'block';
+                    
+                    // Highlight the specific duplicate selects
+                    const pickCounts = {};
+                    selects.forEach(select => {
+                        const value = select.value;
+                        if (value !== '') {
+                            pickCounts[value] = (pickCounts[value] || 0) + 1;
+                            if (pickCounts[value] > 1) {
+                                select.classList.add('has-duplicate-pick');
+                            }
+                        }
+                    });
+                }
+            });
+            
+            return hasDuplicates;
+        }
+        
+        // Check on page load
+        checkForDuplicates();
+        
+        // Check whenever any pick changes
+        pickSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                checkForDuplicates();
+                formError.style.display = 'none';
+            });
+        });
+        
+        // Prevent form submission if duplicates exist
+        form.addEventListener('submit', function(e) {
+            const hasDuplicates = checkForDuplicates();
+            
+            if (hasDuplicates) {
+                e.preventDefault();
+                formError.style.display = 'block';
+                formError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                return false;
+            }
+            
+            formError.style.display = 'none';
+            return true;
+        });
+    });
+</script>

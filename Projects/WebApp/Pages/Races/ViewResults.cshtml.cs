@@ -19,6 +19,8 @@ namespace WebApp.Pages.Races
         public Race? Race { get; set; }
 
         public List<UserResult> RankedResults { get; set; } = new();
+        public int? CurrentUserPlace { get; set; }
+        public int TotalPlayers { get; set; }
 
         public class UserResult
         {
@@ -31,10 +33,10 @@ namespace WebApp.Pages.Races
             Race = await _context.Races.Include(r => r.Pool).FirstOrDefaultAsync(r => r.Id == RaceId);
             if (Race == null) return NotFound();
 
-            // Get all picks for this race, including user
+            // Get all picks for this race, including user, filter by IsPlayer
             var picks = await _context.Picks
                 .Include(p => p.User)
-                .Where(p => p.RaceId == RaceId)
+                .Where(p => p.RaceId == RaceId && p.User.IsPlayer)
                 .ToListAsync();
 
             // Order by least points (lowest is best)
@@ -46,6 +48,17 @@ namespace WebApp.Pages.Races
                     Points = p.Points
                 })
                 .ToList();
+
+            TotalPlayers = RankedResults.Count;
+
+            // Find current user's place
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var currentUserName = User.Identity.Name;
+                CurrentUserPlace = RankedResults
+                    .Select((result, index) => new { result.UserName, Place = index + 1 })
+                    .FirstOrDefault(x => x.UserName == currentUserName)?.Place;
+            }
 
             return Page();
         }

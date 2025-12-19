@@ -3,18 +3,18 @@
 @{
     ViewData["Title"] = "Dashboard";
 }
-<h1>Dashboard</h1>
+<h1><i class="bi bi-speedometer2 text-primary"></i> Dashboard</h1>
 
 <div class="mb-2 text-muted">
     @if (Model.CurrentRace != null)
     {
-        <span> This week's race: </span>
+        <span><i class="bi bi-calendar-event text-info"></i> This week's race: </span>
         <span class="fw-semibold">@Model.CurrentRace.Name</span>
         <span class="ms-2">(@Model.CurrentRaceNumber of @Model.TotalRaces)</span>
     }
     else
     {
-        <span>No upcoming race</span>
+        <span><i class="bi bi-calendar-x text-muted"></i> No upcoming race</span>
         <span class="ms-2">(@Model.TotalRaces race@(Model.TotalRaces == 1 ? "" : "s") this season)</span>
     }
 </div>
@@ -22,38 +22,80 @@
 <div class="row mb-4">
     <!-- Overall Place Tile (clickable, with tooltip) -->
     <div class="col-md-6 mb-3">
-        <a href="/Standings" class="text-decoration-none" title="Click here to see how you stack up!">
-            <div class="card text-center shadow-sm h-100">
+        <div class="card text-center shadow-sm h-100 border-primary">
+            <a href="/Standings" class="text-decoration-none" title="Click here to see how you stack up!">
                 <div class="card-body">
-                    <h5 class="card-title">Overall Place</h5>
+                    <h5 class="card-title"><i class="bi bi-trophy-fill text-warning"></i> Overall Place</h5>
                     @if (!Model.HasResults)
                     {
-                        <div class="text-secondary">There are no standings available yet for this season.</div>
+                        <div class="text-secondary"><i class="bi bi-hourglass-split"></i> There are no standings available yet for this season.</div>
                     }
                     else
                     {
-                        <div class="display-4 fw-bold text-primary">@Model.OverallPlace</div>
+                        <div class="display-4 fw-bold text-primary"><i class="bi bi-award-fill"></i> @Model.OverallPlace</div>
                     }
                 </div>
+            </a>
+            
+            <!-- Primary Drivers Display -->
+            <div class="mt-3 border-top pt-3 px-3 pb-3 bg-light">
+                <h6 class="text-muted mb-2"><i class="bi bi-person-badge-fill text-info"></i> Primary Drivers</h6>
+                <div class="row">
+                    <div class="col-6">
+                        <small class="text-muted d-block"><i class="bi bi-1-circle-fill text-primary"></i> First Half</small>
+                        @if (Model.PrimaryDriver != null)
+                        {
+                            <div class="fw-semibold text-info small">
+                                <i class="bi bi-person-fill"></i> @Model.PrimaryDriver.Name<br />
+                                <span class="text-muted"><i class="bi bi-hash"></i>@Model.PrimaryDriver.CarNumber</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-secondary small"><i class="bi bi-dash-circle"></i> Not set</div>
+                        }
+                    </div>
+                    <div class="col-6">
+                        <small class="text-muted d-block"><i class="bi bi-2-circle-fill text-success"></i> Second Half</small>
+                        @if (Model.SecondHalfPrimaryDriver != null)
+                        {
+                            <div class="fw-semibold text-info small">
+                                <i class="bi bi-person-fill"></i> @Model.SecondHalfPrimaryDriver.Name<br />
+                                <span class="text-muted"><i class="bi bi-hash"></i>@Model.SecondHalfPrimaryDriver.CarNumber</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-secondary small"><i class="bi bi-dash-circle"></i> Not set</div>
+                        }
+                    </div>
+                </div>
+                
+                <!-- Primary Driver Button -->
+                <div class="mt-3">
+                    <button type="button" class="btn btn-outline-secondary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#primaryDriverModal">
+                        <i class="bi bi-star-fill text-warning"></i> Manage Primary Drivers
+                    </button>
+                </div>
             </div>
-        </a>
+        </div>
     </div>
 
     <!-- Total Points Tile (clickable, with tooltip) -->
     <div class="col-md-6 mb-3">
         <a href="/Standings" class="text-decoration-none" title="Click here to see how you stack up!">
-            <div class="card text-center shadow-sm h-100">
+            <div class="card text-center shadow-sm h-100 border-success">
                 <div class="card-body">
-                    <h5 class="card-title">Total Points</h5>
+                    <h5 class="card-title"><i class="bi bi-graph-up-arrow text-success"></i> Total Points</h5>
                     @if (!Model.HasResults)
                     {
-                        <div class="text-secondary">No points available yet for this season.</div>
+                        <div class="text-secondary"><i class="bi bi-hourglass-split"></i> No points available yet for this season.</div>
                     }
                     else
                     {
-                        <div class="display-4 fw-bold text-success">@Model.TotalPoints</div>
+                        <div class="display-4 fw-bold text-success"><i class="bi bi-star-fill"></i> @Model.TotalPoints</div>
                     }
-                    <div class="mt-2 text-muted">Races this season: @Model.TotalRaces</div>
+                    <div class="mt-2 text-muted"><i class="bi bi-flag-fill text-danger"></i> Races this season: @Model.TotalRaces</div>
                 </div>
             </div>
         </a>
@@ -66,13 +108,14 @@
     <div class="row mb-4">
         <!-- Picks for Current Week Tile -->
         <div class="col-md-6 mb-3">
-            <div class="card shadow-sm h-100">
+            <div class="card shadow-sm h-100 border-info">
                 <div class="card-body">
-                    <h5 class="card-title">Picks for This Week</h5>
+                    <h5 class="card-title"><i class="bi bi-hand-index-thumb-fill text-primary"></i> Picks for This Week</h5>
                     <div class="mb-2 text-muted">
+                        <i class="bi bi-calendar-check text-info"></i>
                         @(Model.CurrentRace != null && !string.IsNullOrWhiteSpace(Model.CurrentRace.Name)
-                            ? $"{Model.CurrentRace.Name} — {Model.CurrentRace.Date.ToString("MMMM d, yyyy")}"
-                            : "N/A")
+                                            ? $"{Model.CurrentRace.Name} — {Model.CurrentRace.Date.ToString("MMMM d, yyyy")}"
+                                            : "N/A")
                     </div>
 
                     @{
@@ -83,43 +126,43 @@
                     @if (Model.CurrentWeekPick != null)
                     {
                         <ul class="list-group list-group-flush">
-                            <li class="list-group-item">Primary: @Model.CurrentWeekPick.Pick1?.Name (@Model.CurrentWeekPick.Pick1?.CarNumber)</li>
-                            <li class="list-group-item">Pick 2: @Model.CurrentWeekPick.Pick2?.Name (@Model.CurrentWeekPick.Pick2?.CarNumber)</li>
-                            <li class="list-group-item">Pick 3: @Model.CurrentWeekPick.Pick3?.Name (@Model.CurrentWeekPick.Pick3?.CarNumber)</li>
+                            <li class="list-group-item"><i class="bi bi-star-fill text-warning"></i> <strong>Primary:</strong> @Model.CurrentWeekPick.Pick1?.Name (@Model.CurrentWeekPick.Pick1?.CarNumber)</li>
+                            <li class="list-group-item"><i class="bi bi-2-circle-fill text-info"></i> <strong>Pick 2:</strong> @Model.CurrentWeekPick.Pick2?.Name (@Model.CurrentWeekPick.Pick2?.CarNumber)</li>
+                            <li class="list-group-item"><i class="bi bi-3-circle-fill text-success"></i> <strong>Pick 3:</strong> @Model.CurrentWeekPick.Pick3?.Name (@Model.CurrentWeekPick.Pick3?.CarNumber)</li>
                         </ul>
 
                         @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
                         {
                             <div class="alert alert-warning mt-2 mb-2" role="alert">
-                                Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to change your picks.
+                                <i class="bi bi-exclamation-triangle-fill"></i> Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to change your picks.
                             </div>
                         }
 
                         @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
                         {
-                            <a href="/Races/Picks/Edit/@Model.CurrentRace?.Id" class="btn btn-primary">Change your picks for this week</a>
+                            <a href="/Races/Picks/Edit/@Model.CurrentRace?.Id" class="btn btn-primary"><i class="bi bi-pencil-square"></i> Change your picks for this week</a>
                         }
                         else
                         {
                             <span title="You cannot change your picks on or after race day." tabindex="0">
-                                <a href="/Races/Picks/@Model.CurrentRace?.Id" class="btn btn-primary">See all picks for this week</a>
+                                <a href="/Races/Picks/@Model.CurrentRace?.Id" class="btn btn-primary"><i class="bi bi-eye-fill"></i> See all picks for this week</a>
                             </span>
                         }
                     }
                     else
                     {
-                        <div class="text-secondary">You have not made picks for this week.</div>
+                        <div class="text-secondary"><i class="bi bi-clipboard-x"></i> You have not made picks for this week.</div>
 
                         @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
                         {
                             <div class="alert alert-warning mt-2 mb-2" role="alert">
-                                Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to make your picks.
+                                <i class="bi bi-exclamation-triangle-fill"></i> Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to make your picks.
                             </div>
                         }
 
                         @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
                         {
-                            <a href="/Races/Pick/@Model.CurrentRace?.Id" class="btn btn-primary">Make your picks for this week</a>
+                            <a href="/Races/Pick/@Model.CurrentRace?.Id" class="btn btn-primary"><i class="bi bi-plus-circle-fill"></i> Make your picks for this week</a>
                         }
                     }
                 </div>
@@ -128,21 +171,21 @@
 
         <!-- Current Week Race Results Tile (Player Standings) -->
         <div class="col-md-6 mb-3">
-            <div class="card shadow-sm h-100">
+            <div class="card shadow-sm h-100 border-warning">
                 <div class="card-body">
-                    <h5 class="card-title">This Week's Player Results</h5>
+                    <h5 class="card-title"><i class="bi bi-bar-chart-fill text-warning"></i> This Week's Player Results</h5>
                     <div class="mb-2 text-muted">
-                        @Model.CurrentRace.Name — @Model.CurrentRace.Date.ToString("MMMM d, yyyy")
+                        <i class="bi bi-calendar-check text-info"></i> @Model.CurrentRace.Name — @Model.CurrentRace.Date.ToString("MMMM d, yyyy")
                     </div>
 
                     @if (Model.CurrentWeekPlayerResults != null && Model.CurrentWeekPlayerResults.Any())
                     {
                         <table class="table table-sm table-bordered table-hover">
-                            <thead>
+                            <thead class="table-light">
                                 <tr>
-                                    <th>Place</th>
-                                    <th>Player</th>
-                                    <th>Points</th>
+                                    <th><i class="bi bi-trophy"></i> Place</th>
+                                    <th><i class="bi bi-person"></i> Player</th>
+                                    <th><i class="bi bi-star"></i> Points</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -150,25 +193,45 @@
                                 {
                                     var isCurrentUser = result.PlayerName == User.Identity?.Name;
                                     <tr class="@(isCurrentUser ? "table-primary" : "")">
-                                        <td class="fw-bold">@result.Place</td>
-                                        <td>@result.PlayerName @(isCurrentUser ? "(You)" : "")</td>
+                                        <td class="fw-bold">
+                                            @if (result.Place == 1)
+                                            {
+                                                <i class="bi bi-trophy-fill text-warning"></i>
+                                            }
+                                            else if (result.Place == 2)
+                                            {
+                                                <i class="bi bi-trophy-fill text-secondary"></i>
+                                            }
+                                            else if (result.Place == 3)
+                                            {
+                                                <i class="bi bi-trophy-fill text-danger"></i>
+                                            }
+                                            @result.Place
+                                        </td>
+                                        <td>
+                                            @if (isCurrentUser)
+                                            {
+                                                <i class="bi bi-person-fill text-primary"></i>
+                                            }
+                                            @result.PlayerName @(isCurrentUser ? "(You)" : "")
+                                        </td>
                                         <td>@result.Points</td>
                                     </tr>
                                 }
                             </tbody>
                         </table>
-                        <a href="/Standings?raceId=@Model.CurrentRace.Id" class="btn btn-outline-primary btn-sm">View Full Details</a>
+                        <a href="/Standings?raceId=@Model.CurrentRace.Id" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye"></i> View Full Details</a>
                     }
                     else if (Model.CurrentRace.Date <= DateTime.Today)
                     {
                         <div class="alert alert-info" role="alert">
-                            <strong>Results Coming Soon!</strong> Player results for this race are typically available within 2-3 days after the race concludes. Check back soon!
+                            <i class="bi bi-info-circle-fill"></i> <strong>Results Coming Soon!</strong> Player results for this race are typically available within 2-3 days after the race concludes. Check back soon!
                         </div>
                     }
                     else
                     {
                         <div class="text-secondary">
-                            Player results will be available after the race is completed (typically within 2-3 days).
+                            <i class="bi bi-clock-history"></i> Player results will be available after the race is completed (typically within 2-3 days).
                         </div>
                     }
                 </div>
@@ -177,96 +240,111 @@
     </div>
 }
 
-<!-- Primary Driver Tile (First Half) -->
-<div class="row mb-4">
-    <div class="col-md-6 mb-3">
-        <div class="card shadow-sm h-100">
-            <div class="card-body text-center">
-                <h5 class="card-title">Primary Driver (First Half)</h5>
-                @if (Model.PrimaryDriver != null)
-                {
-                    <div class="mb-2 fw-bold text-info">
-                        @Model.PrimaryDriver.Name (@Model.PrimaryDriver.CarNumber)
-                    </div>
-                }
-                else
-                {
-                    <div class="text-secondary mb-2">No primary driver set.</div>
-                }
-                @if (Model.FirstRace != null && Model.FirstRace.Date > DateTime.Today)
-                {
-                    <form method="post" asp-page-handler="SetPrimaryDriver" class="d-inline">
-                        <select id="driverSelectFirst" name="driverId" class="form-select mb-2" required>
-                            <option value="">Select driver...</option>
-                            @foreach (var driver in Model.AvailableDrivers)
-                            {
-                                var selected = Model.PrimaryDriver != null && Model.PrimaryDriver.Id == driver.Id ? "selected" : "";
-                                <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">
-                                    @driver.Name (@driver.CarNumber)
-                                </option>
-                            }
-                        </select>
-                        <button id="driverSubmitFirst" type="submit" class="btn btn-primary" disabled>Set Primary Driver</button>
-                    </form>
-                    <div class="form-text">You can set your primary driver until @Model.FirstRace.Date.ToString("MMMM d, yyyy").</div>
-                }
-                else
-                {
-                    <div class="form-text text-secondary">Primary driver selection is closed.</div>
-                }
+<!-- Primary Driver Modal -->
+<div class="modal fade" id="primaryDriverModal" tabindex="-1" aria-labelledby="primaryDriverModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="primaryDriverModalLabel"><i class="bi bi-star-fill"></i> Manage Primary Drivers</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-        </div>
-    </div>
-
-    <!-- Primary Driver Tile (Second Half) -->
-    <div class="col-md-6 mb-3">
-        <div class="card shadow-sm h-100">
-            <div class="card-body text-center">
-                <h5 class="card-title">Primary Driver (Second Half)</h5>
-                @if (Model.SecondHalfPrimaryDriver != null)
-                {
-                    <div class="mb-2 fw-bold text-info">
-                        @Model.SecondHalfPrimaryDriver.Name (@Model.SecondHalfPrimaryDriver.CarNumber)
+            <div class="modal-body">
+                <div class="row">
+                    <!-- Primary Driver (First Half) -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 border-primary">
+                            <div class="card-body text-center">
+                                <h5 class="card-title"><i class="bi bi-1-circle-fill text-primary"></i> Primary Driver (First Half)</h5>
+                                @if (Model.PrimaryDriver != null)
+                                {
+                                    <div class="mb-2 fw-bold text-info">
+                                        <i class="bi bi-person-fill"></i> @Model.PrimaryDriver.Name (@Model.PrimaryDriver.CarNumber)
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-secondary mb-2"><i class="bi bi-dash-circle"></i> No primary driver set.</div>
+                                }
+                                @if (Model.FirstRace != null && Model.FirstRace.Date > DateTime.Today)
+                                {
+                                    <form method="post" asp-page-handler="SetPrimaryDriver" class="d-inline">
+                                        <select id="driverSelectFirst" name="driverId" class="form-select mb-2" required>
+                                            <option value="">Select driver...</option>
+                                            @foreach (var driver in Model.AvailableDrivers)
+                                            {
+                                                var selected = Model.PrimaryDriver != null && Model.PrimaryDriver.Id == driver.Id ? "selected" : "";
+                                                <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">
+                                                    @driver.Name (@driver.CarNumber)
+                                                </option>
+                                            }
+                                        </select>
+                                        <button id="driverSubmitFirst" type="submit" class="btn btn-primary" disabled><i class="bi bi-check-circle"></i> Set Primary Driver</button>
+                                    </form>
+                                    <div class="form-text"><i class="bi bi-calendar-event"></i> You can set your primary driver until @Model.FirstRace.Date.ToString("MMMM d, yyyy").</div>
+                                }
+                                else
+                                {
+                                    <div class="form-text text-secondary"><i class="bi bi-lock-fill"></i> Primary driver selection is closed.</div>
+                                }
+                            </div>
+                        </div>
                     </div>
-                }
-                else
-                {
-                    <div class="text-secondary mb-2">No primary driver set.</div>
-                }
-                @if (Model.SecondHalfFirstRace != null && Model.SecondHalfFirstRace.Date > DateTime.Today)
-                {
-                    <form method="post" asp-page-handler="SetPrimarySecondHalfDriver" class="d-inline">
-                        <select id="driverSelectSecond" name="secondHalfDriverId" class="form-select mb-2" required>
-                            <option value="">Select driver...</option>
-                            @foreach (var driver in Model.AvailableDrivers)
-                            {
-                                var selected = Model.SecondHalfPrimaryDriver != null && Model.SecondHalfPrimaryDriver.Id == driver.Id ? "selected" : "";
-                                <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">
-                                    @driver.Name (@driver.CarNumber)
-                                </option>
-                            }
-                        </select>
-                        <button id="driverSubmitSecond" type="submit" class="btn btn-primary" disabled>Set Primary Driver</button>
-                    </form>
-                    <div class="form-text">You can set your primary driver until @Model.SecondHalfFirstRace.Date.ToString("MMMM d, yyyy").</div>
-                }
-                else
-                {
-                    <div class="form-text text-secondary">Primary driver selection is closed.</div>
-                }
+
+                    <!-- Primary Driver (Second Half) -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card h-100 border-success">
+                            <div class="card-body text-center">
+                                <h5 class="card-title"><i class="bi bi-2-circle-fill text-success"></i> Primary Driver (Second Half)</h5>
+                                @if (Model.SecondHalfPrimaryDriver != null)
+                                {
+                                    <div class="mb-2 fw-bold text-info">
+                                        <i class="bi bi-person-fill"></i> @Model.SecondHalfPrimaryDriver.Name (@Model.SecondHalfPrimaryDriver.CarNumber)
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="text-secondary mb-2"><i class="bi bi-dash-circle"></i> No primary driver set.</div>
+                                }
+                                @if (Model.SecondHalfFirstRace != null && Model.SecondHalfFirstRace.Date > DateTime.Today)
+                                {
+                                    <form method="post" asp-page-handler="SetPrimarySecondHalfDriver" class="d-inline">
+                                        <select id="driverSelectSecond" name="secondHalfDriverId" class="form-select mb-2" required>
+                                            <option value="">Select driver...</option>
+                                            @foreach (var driver in Model.AvailableDrivers)
+                                            {
+                                                var selected = Model.SecondHalfPrimaryDriver != null && Model.SecondHalfPrimaryDriver.Id == driver.Id ? "selected" : "";
+                                                <option value="@driver.Id" selected="@(selected == "selected" ? "selected" : null)">
+                                                    @driver.Name (@driver.CarNumber)
+                                                </option>
+                                            }
+                                        </select>
+                                        <button id="driverSubmitSecond" type="submit" class="btn btn-primary" disabled><i class="bi bi-check-circle"></i> Set Primary Driver</button>
+                                    </form>
+                                    <div class="form-text"><i class="bi bi-calendar-event"></i> You can set your primary driver until @Model.SecondHalfFirstRace.Date.ToString("MMMM d, yyyy").</div>
+                                }
+                                else
+                                {
+                                    <div class="form-text text-secondary"><i class="bi bi-lock-fill"></i> Primary driver selection is closed.</div>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle"></i> Close</button>
             </div>
         </div>
     </div>
 </div>
 
-
 <!-- Most Recent Race Results Tile in its own row, full width -->
 <div class="row mb-4">
     <div class="col-12 mb-3">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm border-danger">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="card-title mb-0">Most Recent Race Results</h5>
+                    <h5 class="card-title mb-0"><i class="bi bi-flag-checkered text-danger"></i> Most Recent Race Results</h5>
                     <button class="btn btn-sm btn-outline-secondary" id="toggleResultsBtn" type="button" aria-expanded="true" aria-controls="raceResultsContent">
                         <span id="toggleIcon">−</span>
                     </button>
@@ -278,7 +356,7 @@
                     {
                         var selectedRaceId = Model.RecentResults?.OrderByDescending(rr => rr.Id).FirstOrDefault()?.Race?.Id ?? Model.RacesWithResults.First().Id;
                         <div class="mb-2 d-flex align-items-center">
-                            <label for="raceSelect" class="me-2 mb-0">Race:</label>
+                            <label for="raceSelect" class="me-2 mb-0"><i class="bi bi-filter-circle text-primary"></i> Race:</label>
                             <select id="raceSelect" class="form-select w-auto">
                                 @foreach (var race in Model.RacesWithResults)
                                 {
@@ -296,7 +374,7 @@
                             @if (Model.RecentResults != null && Model.RecentResults.Any() && Model.RecentResults.FirstOrDefault()?.Race?.Name != null)
                             {
                                 var recentRace = Model.RecentResults.FirstOrDefault().Race;
-                                @($"{recentRace.Name} — {recentRace.Date.ToString("MMMM d, yyyy")}")
+                                <i class="bi bi-calendar-check text-info"></i> @($"{recentRace.Name} — {recentRace.Date.ToString("MMMM d, yyyy")}")
                             }
                         </div>
                     }
@@ -304,13 +382,14 @@
                     <!-- Search by driver (client-side, instant) -->
                     <div class="mb-3">
                         <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-search text-primary"></i></span>
                             <input type="text" id="searchDriver" class="form-control" placeholder="Search by driver name" oninput="filterResultsAndPaginate()" />
                         </div>
                     </div>
 
                     <!-- Page size selector -->
                     <div class="mb-3 d-flex align-items-center">
-                        <label for="pageSizeSelect" class="me-2 mb-0">Show:</label>
+                        <label for="pageSizeSelect" class="me-2 mb-0"><i class="bi bi-list-ol text-success"></i> Show:</label>
                         <select id="pageSizeSelect" class="form-select w-auto">
                             <option value="10">10</option>
                             <option value="20">20</option>
@@ -322,39 +401,67 @@
                     </div>
 
                     <table class="table table-sm table-bordered mb-0" id="resultsTable">
-                        <thead>
+                        <thead class="table-light">
                             <tr>
-                                <th>Place</th>
-                                <th>Driver</th>
+                                <th><i class="bi bi-trophy"></i> Place</th>
+                                <th><i class="bi bi-person-fill"></i> Driver</th>
                             </tr>
                         </thead>
                         <tbody id="resultsBody">
-                        @if (Model.AllRecentResults != null && Model.AllRecentResults.Any())
-                        {
-                            foreach (var result in Model.AllRecentResults)
+                            @if (Model.AllRecentResults != null && Model.AllRecentResults.Any())
                             {
-                                <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
-                                    <td>@result.Place</td>
-                                    <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
+                                foreach (var result in Model.AllRecentResults)
+                                {
+                                    <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
+                                        <td>
+                                            @if (result.Place == 1)
+                                            {
+                                                <i class="bi bi-trophy-fill text-warning"></i>
+                                            }
+                                            else if (result.Place == 2)
+                                            {
+                                                <i class="bi bi-trophy-fill text-secondary"></i>
+                                            }
+                                            else if (result.Place == 3)
+                                            {
+                                                <i class="bi bi-trophy-fill text-danger"></i>
+                                            }
+                                            @result.Place
+                                        </td>
+                                        <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
+                                    </tr>
+                                }
+                            }
+                            else if (Model.RecentResults != null && Model.RecentResults.Any())
+                            {
+                                foreach (var result in Model.RecentResults)
+                                {
+                                    <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
+                                        <td>
+                                            @if (result.Place == 1)
+                                            {
+                                                <i class="bi bi-trophy-fill text-warning"></i>
+                                            }
+                                            else if (result.Place == 2)
+                                            {
+                                                <i class="bi bi-trophy-fill text-secondary"></i>
+                                            }
+                                            else if (result.Place == 3)
+                                            {
+                                                <i class="bi bi-trophy-fill text-danger"></i>
+                                            }
+                                            @result.Place
+                                        </td>
+                                        <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="2" class="text-secondary"><i class="bi bi-inbox"></i> No recent results available.</td>
                                 </tr>
                             }
-                        }
-                        else if (Model.RecentResults != null && Model.RecentResults.Any())
-                        {
-                            foreach (var result in Model.RecentResults)
-                            {
-                                <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
-                                    <td>@result.Place</td>
-                                    <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
-                                </tr>
-                            }
-                        }
-                        else
-                        {
-                            <tr>
-                                <td colspan="2" class="text-secondary">No recent results available.</td>
-                            </tr>
-                        }
                         </tbody>
                     </table>
 
@@ -371,214 +478,214 @@
 </div>
 
 @section Scripts {
-<script>
-let pageSize = 10;
-let currentPage = 1;
-let allRows = [];
-let filteredRows = [];
+    <script>
+        let pageSize = 10;
+        let currentPage = 1;
+        let allRows = [];
+        let filteredRows = [];
 
-// Cookie helper functions
-function setCookie(name, value, days) {
-    const expires = new Date();
-    expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
-    document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
-}
-
-function getCookie(name) {
-    const nameEQ = name + '=';
-    const ca = document.cookie.split(';');
-    for (let i = 0; i < ca.length; i++) {
-        let c = ca[i];
-        while (c.charAt(0) === ' ') c = c.substring(1, c.length);
-        if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
-    }
-    return null;
-}
-
-// return currently selected race id (string) or null
-function getSelectedRaceId() {
-    const sel = document.getElementById('raceSelect');
-    return sel ? sel.value : null;
-}
-
-function updateHeaderFromSelectedRace() {
-    const sel = document.getElementById('raceSelect');
-    if (!sel) return;
-    const opt = sel.selectedOptions[0];
-    if (!opt) return;
-    const name = opt.dataset.name;
-    const date = opt.dataset.date;
-}
-
-function filterResultsAndPaginate() {
-    const input = document.getElementById('searchDriver');
-    const filter = input.value.trim().toLowerCase();
-    const selectedRaceId = getSelectedRaceId();
-
-    filteredRows = allRows.filter(row => {
-        // filter by race id first
-        const rowRaceId = row.dataset.raceId;
-        if (selectedRaceId && rowRaceId !== selectedRaceId) return false;
-
-        if (!filter) return true;
-
-        const driverCell = row.getElementsByTagName('td')[1];
-        if (!driverCell) return false;
-        const txtValue = driverCell.textContent || driverCell.innerText;
-        return txtValue.toLowerCase().indexOf(filter) > -1;
-    });
-
-    currentPage = 1;
-    renderPage();
-}
-
-function renderPage() {
-    const tbody = document.getElementById('resultsBody');
-    allRows.forEach(row => row.style.display = 'none');
-
-    const rowsToShow = filteredRows;
-    const totalRows = rowsToShow.length;
-    const totalPages = Math.ceil(totalRows / pageSize);
-
-    if (totalRows === 0) {
-        const noResultsRow = document.createElement('tr');
-        noResultsRow.innerHTML = '<td colspan="2" class="text-secondary">No recent results available.</td>';
-        tbody.innerHTML = '';
-        tbody.appendChild(noResultsRow);
-        document.getElementById('pagination').innerHTML = '';
-        return;
-    }
-
-    tbody.innerHTML = '';
-    for (let i = (currentPage - 1) * pageSize; i < Math.min(currentPage * pageSize, totalRows); i++) {
-        tbody.appendChild(rowsToShow[i]);
-        rowsToShow[i].style.display = '';
-    }
-
-    renderPagination(totalPages);
-}
-
-function renderPagination(totalPages) {
-    const pagination = document.getElementById('pagination');
-    pagination.innerHTML = '';
-
-    if (totalPages <= 1) return;
-
-    for (let i = 1; i <= totalPages; i++) {
-        const li = document.createElement('li');
-        li.className = 'page-item' + (i === currentPage ? ' active' : '' );
-        const a = document.createElement('a');
-        a.className = 'page-link';
-        a.href = '#';
-        a.textContent = i;
-        a.onclick = function(e) {
-            e.preventDefault();
-            currentPage = i;
-            renderPage();
-        };
-        li.appendChild(a);
-        pagination.appendChild(li);
-    }
-}
-
-function setupSelectEnable(selectId, buttonId) {
-    const select = document.getElementById(selectId);
-    const btn = document.getElementById(buttonId);
-    if (!select || !btn) return;
-    const initial = select.value;
-    // Ensure button is disabled until user changes selection
-    btn.disabled = true;
-    select.addEventListener('change', function() {
-        // Enable only if a non-empty different value is selected
-        btn.disabled = !(select.value && select.value !== initial);
-    });
-}
-
-// Toggle race results section with cookie persistence
-function setupRaceResultsToggle() {
-    const toggleBtn = document.getElementById('toggleResultsBtn');
-    const content = document.getElementById('raceResultsContent');
-    const toggleIcon = document.getElementById('toggleIcon');
-    
-    if (!toggleBtn || !content || !toggleIcon) return;
-
-    // Load saved state from cookie (default to expanded)
-    const savedState = getCookie('raceResultsExpanded');
-    const isExpanded = savedState === null ? true : savedState === 'true';
-
-    // Set initial state
-    if (!isExpanded) {
-        content.style.display = 'none';
-        toggleIcon.textContent = '+';
-        toggleBtn.setAttribute('aria-expanded', 'false');
-    }
-
-    // Toggle on button click
-    toggleBtn.addEventListener('click', function() {
-        const currentlyExpanded = content.style.display !== 'none';
-        const newState = !currentlyExpanded;
-        
-        content.style.display = newState ? 'block' : 'none';
-        toggleIcon.textContent = newState ? '−' : '+';
-        toggleBtn.setAttribute('aria-expanded', newState.toString());
-        
-        // Save state to cookie (365 days)
-        setCookie('raceResultsExpanded', newState.toString(), 365);
-    });
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    allRows = Array.from(document.querySelectorAll('#resultsTable tbody tr[data-race-id]'));
-    // If there are no rows with data-race-id, fall back to any rows (to preserve "No recent results" row)
-    if (!allRows.length) {
-        allRows = Array.from(document.querySelectorAll('#resultsTable tbody tr'));
-    }
-
-    // Load page size from cookie
-    const savedPageSize = getCookie('dashboardPageSize');
-    if (savedPageSize) {
-        pageSize = parseInt(savedPageSize, 10);
-        const pageSizeSelect = document.getElementById('pageSizeSelect');
-        if (pageSizeSelect) {
-            pageSizeSelect.value = savedPageSize;
+        // Cookie helper functions
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = name + '=' + value + ';expires=' + expires.toUTCString() + ';path=/';
         }
-    }
 
-    // Handle page size change
-    const pageSizeSelect = document.getElementById('pageSizeSelect');
-    if (pageSizeSelect) {
-        pageSizeSelect.addEventListener('change', function() {
-            pageSize = parseInt(this.value, 10);
-            setCookie('dashboardPageSize', pageSize, 365);
+        function getCookie(name) {
+            const nameEQ = name + '=';
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        // return currently selected race id (string) or null
+        function getSelectedRaceId() {
+            const sel = document.getElementById('raceSelect');
+            return sel ? sel.value : null;
+        }
+
+        function updateHeaderFromSelectedRace() {
+            const sel = document.getElementById('raceSelect');
+            if (!sel) return;
+            const opt = sel.selectedOptions[0];
+            if (!opt) return;
+            const name = opt.dataset.name;
+            const date = opt.dataset.date;
+        }
+
+        function filterResultsAndPaginate() {
+            const input = document.getElementById('searchDriver');
+            const filter = input.value.trim().toLowerCase();
+            const selectedRaceId = getSelectedRaceId();
+
+            filteredRows = allRows.filter(row => {
+                // filter by race id first
+                const rowRaceId = row.dataset.raceId;
+                if (selectedRaceId && rowRaceId !== selectedRaceId) return false;
+
+                if (!filter) return true;
+
+                const driverCell = row.getElementsByTagName('td')[1];
+                if (!driverCell) return false;
+                const txtValue = driverCell.textContent || driverCell.innerText;
+                return txtValue.toLowerCase().indexOf(filter) > -1;
+            });
+
             currentPage = 1;
             renderPage();
-        });
-    }
+        }
 
-    // Initialize race header and wire race select change
-    const raceSelect = document.getElementById('raceSelect');
-    if (raceSelect) {
-        updateHeaderFromSelectedRace();
-        raceSelect.addEventListener('change', function() {
-            updateHeaderFromSelectedRace();
+        function renderPage() {
+            const tbody = document.getElementById('resultsBody');
+            allRows.forEach(row => row.style.display = 'none');
+
+            const rowsToShow = filteredRows;
+            const totalRows = rowsToShow.length;
+            const totalPages = Math.ceil(totalRows / pageSize);
+
+            if (totalRows === 0) {
+                const noResultsRow = document.createElement('tr');
+                noResultsRow.innerHTML = '<td colspan="2" class="text-secondary">No recent results available.</td>';
+                tbody.innerHTML = '';
+                tbody.appendChild(noResultsRow);
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            for (let i = (currentPage - 1) * pageSize; i < Math.min(currentPage * pageSize, totalRows); i++) {
+                tbody.appendChild(rowsToShow[i]);
+                rowsToShow[i].style.display = '';
+            }
+
+            renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            if (totalPages <= 1) return;
+
+            for (let i = 1; i <= totalPages; i++) {
+                const li = document.createElement('li');
+                li.className = 'page-item' + (i === currentPage ? ' active' : '' );
+                const a = document.createElement('a');
+                a.className = 'page-link';
+                a.href = '#';
+                a.textContent = i;
+                a.onclick = function(e) {
+                    e.preventDefault();
+                    currentPage = i;
+                    renderPage();
+                };
+                li.appendChild(a);
+                pagination.appendChild(li);
+            }
+        }
+
+        function setupSelectEnable(selectId, buttonId) {
+            const select = document.getElementById(selectId);
+            const btn = document.getElementById(buttonId);
+            if (!select || !btn) return;
+            const initial = select.value;
+            // Ensure button is disabled until user changes selection
+            btn.disabled = true;
+            select.addEventListener('change', function() {
+                // Enable only if a non-empty different value is selected
+                btn.disabled = !(select.value && select.value !== initial);
+            });
+        }
+
+        // Toggle race results section with cookie persistence
+        function setupRaceResultsToggle() {
+            const toggleBtn = document.getElementById('toggleResultsBtn');
+            const content = document.getElementById('raceResultsContent');
+            const toggleIcon = document.getElementById('toggleIcon');
+
+            if (!toggleBtn || !content || !toggleIcon) return;
+
+            // Load saved state from cookie (default to expanded)
+            const savedState = getCookie('raceResultsExpanded');
+            const isExpanded = savedState === null ? true : savedState === 'true';
+
+            // Set initial state
+            if (!isExpanded) {
+                content.style.display = 'none';
+                toggleIcon.textContent = '+';
+                toggleBtn.setAttribute('aria-expanded', 'false');
+            }
+
+            // Toggle on button click
+            toggleBtn.addEventListener('click', function() {
+                const currentlyExpanded = content.style.display !== 'none';
+                const newState = !currentlyExpanded;
+
+                content.style.display = newState ? 'block' : 'none';
+                toggleIcon.textContent = newState ? '−' : '+';
+                toggleBtn.setAttribute('aria-expanded', newState.toString());
+
+                // Save state to cookie (365 days)
+                setCookie('raceResultsExpanded', newState.toString(), 365);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            allRows = Array.from(document.querySelectorAll('#resultsTable tbody tr[data-race-id]'));
+            // If there are no rows with data-race-id, fall back to any rows (to preserve "No recent results" row)
+            if (!allRows.length) {
+                allRows = Array.from(document.querySelectorAll('#resultsTable tbody tr'));
+            }
+
+            // Load page size from cookie
+            const savedPageSize = getCookie('dashboardPageSize');
+            if (savedPageSize) {
+                pageSize = parseInt(savedPageSize, 10);
+                const pageSizeSelect = document.getElementById('pageSizeSelect');
+                if (pageSizeSelect) {
+                    pageSizeSelect.value = savedPageSize;
+                }
+            }
+
+            // Handle page size change
+            const pageSizeSelect = document.getElementById('pageSizeSelect');
+            if (pageSizeSelect) {
+                pageSizeSelect.addEventListener('change', function() {
+                    pageSize = parseInt(this.value, 10);
+                    setCookie('dashboardPageSize', pageSize, 365);
+                    currentPage = 1;
+                    renderPage();
+                });
+            }
+
+            // Initialize race header and wire race select change
+            const raceSelect = document.getElementById('raceSelect');
+            if (raceSelect) {
+                updateHeaderFromSelectedRace();
+                raceSelect.addEventListener('change', function() {
+                    updateHeaderFromSelectedRace();
+                    filterResultsAndPaginate();
+                });
+            }
+
+            // Setup race results toggle with cookie persistence
+            setupRaceResultsToggle();
+
+            // Perform initial filter based on selected race
             filterResultsAndPaginate();
+
+            const search = document.getElementById('searchDriver');
+            if (search) {
+                search.addEventListener('input', filterResultsAndPaginate);
+            }
+
+            // Wire up primary driver selects so buttons remain disabled until selection changes
+            setupSelectEnable('driverSelectFirst', 'driverSubmitFirst');
+            setupSelectEnable('driverSelectSecond', 'driverSubmitSecond');
         });
-    }
-
-    // Setup race results toggle with cookie persistence
-    setupRaceResultsToggle();
-
-    // Perform initial filter based on selected race
-    filterResultsAndPaginate();
-
-    const search = document.getElementById('searchDriver');
-    if (search) {
-        search.addEventListener('input', filterResultsAndPaginate);
-    }
-
-    // Wire up primary driver selects so buttons remain disabled until selection changes
-    setupSelectEnable('driverSelectFirst', 'driverSubmitFirst');
-    setupSelectEnable('driverSelectSecond', 'driverSubmitSecond');
-});
-</script>
+    </script>
 }
