@@ -92,7 +92,7 @@
 
                     @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
                     {
-                        <a href="/Races/Pick/@Model.CurrentRace?.Id" class="btn btn-primary">Change your picks for this week</a>
+                        <a href="/Races/Picks/Edit/@Model.CurrentRace?.Id" class="btn btn-primary">Change your picks for this week</a>
                     }
                     else
                     {

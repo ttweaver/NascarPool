@@ -11,16 +11,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace WebApp.Pages.Races.Pick
+namespace WebApp.Pages.Races.Picks
 {
 	[Authorize]
-	public class PicksModel : PageModel
+	public class EditModel : PageModel
 	{
 		private readonly ApplicationDbContext _context;
 		private readonly UserManager<ApplicationUser> _userManager;
-		private readonly ILogger<PicksModel> _logger;
+		private readonly ILogger<EditModel> _logger;
 
-		public PicksModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ILogger<PicksModel> logger)
+		public EditModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ILogger<EditModel> logger)
 		{
 			_context = context;
 			_userManager = userManager;
