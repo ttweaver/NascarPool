@@ -1,0 +1,60 @@
+@page "{raceId:int}"
+@model WebApp.Areas.Manage.Pages.Races.Picks.IndexModel
+@{
+    ViewData["Title"] = "All Picks";
+}
+
+<h1 class="mb-4">All Picks</h1>
+
+@if (Model.Race == null)
+{
+    <div class="alert alert-danger">Race not found.</div>
+}
+else
+{
+    <div class="mb-4">
+        <h2 class="fs-5 fw-bold text-primary">@Model.Race.Name</h2>
+        <p class="text-muted mb-0">@Model.Race.Date.ToShortDateString()</p>
+        <p class="text-muted">@Model.Race.Pool?.Name (@Model.Race.Pool?.Year)</p>
+    </div>
+
+    @if (!Model.AllPlayerPicks.Any())
+    {
+        <div class="alert alert-info">No players found in this pool.</div>
+    }
+    else
+    {
+        <table class="table table-striped table-bordered align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Player</th>
+                    <th>Primary Driver</th>
+                    <th>Pick 2</th>
+                    <th>Pick 3</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var playerPick in Model.AllPlayerPicks)
+                {
+                    <tr>
+                        <td class="fw-bold">@playerPick.PlayerName</td>
+                        @if (playerPick.HasPicks)
+                        {
+                            <td>@playerPick.Pick1Name (@playerPick.Pick1CarNumber)</td>
+                            <td>@playerPick.Pick2Name (@playerPick.Pick2CarNumber)</td>
+                            <td>@playerPick.Pick3Name (@playerPick.Pick3CarNumber)</td>
+                        }
+                        else
+                        {
+                            <td colspan="3" class="text-muted fst-italic">No picks entered</td>
+                        }
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+
+    <div class="mt-4">
+        <a asp-page="/Races/Index" class="btn btn-secondary">Back to Races</a>
+    </div>
+}

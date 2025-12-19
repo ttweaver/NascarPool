@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Linq;
 
-namespace WebApp.Pages.Drivers
+namespace WebApp.Areas.Manage.Pages.Drivers
 {
     public class IndexModel : PageModel
     {

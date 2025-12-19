@@ -9,7 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace WebApp.Pages.Races
+namespace WebApp.Areas.Manage.Pages.Races
 {
     public class ResultsModel : PageModel
     {

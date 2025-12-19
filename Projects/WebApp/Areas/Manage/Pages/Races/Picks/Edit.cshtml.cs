@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 using WebApp.Data;
 using WebApp.Models;
 
-namespace WebApp.Pages.Races.Picks
+namespace WebApp.Areas.Manage.Pages.Races.Picks
 {
     public class EditModel : PageModel
     {
