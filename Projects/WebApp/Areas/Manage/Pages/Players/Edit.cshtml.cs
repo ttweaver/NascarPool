@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
-namespace WebApp.Pages.Users
+namespace WebApp.Areas.Manage.Pages.Players
 {
     public class EditModel : PageModel
     {

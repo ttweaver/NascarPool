@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using WebApp.Data;
 using WebApp.Models;
 
-namespace WebApp.Pages.Users
+namespace WebApp.Areas.Manage.Pages.Players
 {
     public class CreateModel : PageModel
     {

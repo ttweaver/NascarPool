@@ -4,7 +4,7 @@ using WebApp.Data;
 using WebApp.Models;
 using Microsoft.Extensions.Logging;
 
-namespace WebApp.Pages.Users
+namespace WebApp.Areas.Manage.Pages.Players
 {
     public class DetailsModel : PageModel
     {

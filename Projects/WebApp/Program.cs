@@ -36,6 +36,8 @@ builder.Services.AddAuthorizationBuilder()
 
 builder.Services.AddRazorPages(options =>
 {
+    options.Conventions.AuthorizeAreaFolder("Manage", "/", "AdminPolicy");
+
 	options.Conventions.AuthorizeFolder("/Pools", "AdminPolicy");
 	options.Conventions.AuthorizeFolder("/Drivers", "AdminPolicy");
 
@@ -43,9 +45,6 @@ builder.Services.AddRazorPages(options =>
 					   .AuthorizePage("/Races/Import", "AdminPolicy")
 					   .AuthorizePage("/Races/Picks/Edit", "AdminPolicy")
 					   .AuthorizePage("/Races/Results", "AdminPolicy");
-
-
-	options.Conventions.AuthorizeFolder("/Users", "AdminPolicy");
 });
 
 builder.Services.AddAuthentication()

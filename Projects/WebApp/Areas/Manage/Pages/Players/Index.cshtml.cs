@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
 using WebApp.Models;
 
-namespace WebApp.Pages.Users
+namespace WebApp.Areas.Manage.Pages.Players
 {
     public class IndexModel : PageModel
     {
