@@ -36,7 +36,7 @@ else
             <tbody>
                 @foreach (var playerPick in Model.AllPlayerPicks)
                 {
-                    <tr>
+                    <tr class="@(playerPick.UserId == Model.CurrentUserId ? "table-primary" : "")">
                         <td class="fw-bold">@playerPick.PlayerName</td>
                         @if (playerPick.HasPicks)
                         {
@@ -55,6 +55,6 @@ else
     }
 
     <div class="mt-4">
-        <a asp-page="/Races/Index" class="btn btn-secondary">Back to Races</a>
+        <button onclick="history.back()" class="btn btn-secondary">Back</button>
     </div>
 }

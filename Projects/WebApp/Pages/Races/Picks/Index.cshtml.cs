@@ -6,22 +6,30 @@ using WebApp.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Identity;
 
 namespace WebApp.Pages.Races.Picks
 {
     public class IndexModel : PageModel
     {
         private readonly ApplicationDbContext _context;
-        public IndexModel(ApplicationDbContext context) => _context = context;
+        private readonly UserManager<ApplicationUser> _userManager;
+        public IndexModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+        {
+            _context = context;
+            _userManager = userManager;
+        }
 
         [BindProperty(SupportsGet = true)]
         public int RaceId { get; set; }
 
         public Race? Race { get; set; }
         public List<PlayerPicks> AllPlayerPicks { get; set; } = new();
+        public string? CurrentUserId { get; set; }
 
         public class PlayerPicks
         {
+            public string UserId { get; set; } = string.Empty;
             public string PlayerName { get; set; } = string.Empty;
             public string? Pick1Name { get; set; }
             public string? Pick1CarNumber { get; set; }
@@ -34,6 +42,8 @@ namespace WebApp.Pages.Races.Picks
 
         public async Task<IActionResult> OnGetAsync()
         {
+            CurrentUserId = _userManager.GetUserId(User);
+
             Race = await _context.Races
                 .Include(r => r.Pool)
                 .ThenInclude(p => p.Members)
@@ -63,6 +73,7 @@ namespace WebApp.Pages.Races.Picks
                 var pick = picks.FirstOrDefault(p => p.UserId == member.Id);
                 return new PlayerPicks
                 {
+                    UserId = member.Id,
                     PlayerName = $"{member.FirstName} {member.LastName}",
                     Pick1Name = pick?.Pick1?.Name,
                     Pick1CarNumber = pick?.Pick1?.CarNumber,
