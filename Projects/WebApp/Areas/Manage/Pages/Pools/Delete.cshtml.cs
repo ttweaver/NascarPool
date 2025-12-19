@@ -4,7 +4,7 @@ using WebApp.Data;
 using WebApp.Models;
 using System.Threading.Tasks;
 
-namespace WebApp.Pages.Pools
+namespace WebApp.Areas.Manage.Pages.Pools
 {
     public class DeleteModel : PageModel
     {

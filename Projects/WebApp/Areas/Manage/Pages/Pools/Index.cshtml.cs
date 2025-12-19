@@ -5,7 +5,7 @@ using WebApp.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace WebApp.Pages.Pools
+namespace WebApp.Areas.Manage.Pages.Pools
 {
     public class IndexModel : PageModel
     {

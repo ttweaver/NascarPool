@@ -6,7 +6,7 @@ using WebApp.Models;
 using System.Threading.Tasks;
 using System.Linq;
 
-namespace WebApp.Pages.Pools
+namespace WebApp.Areas.Manage.Pages.Pools
 {
     public class EditModel : PageModel
     {
