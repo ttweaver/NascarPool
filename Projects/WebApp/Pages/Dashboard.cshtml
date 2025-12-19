@@ -21,7 +21,7 @@
 
 <div class="row mb-4">
     <!-- Overall Place Tile (clickable, with tooltip) -->
-    <div class="col-md-4 mb-3">
+    <div class="col-md-6 mb-3">
         <a href="/Standings" class="text-decoration-none" title="Click here to see how you stack up!">
             <div class="card text-center shadow-sm h-100">
                 <div class="card-body">
@@ -40,7 +40,7 @@
     </div>
 
     <!-- Total Points Tile (clickable, with tooltip) -->
-    <div class="col-md-4 mb-3">
+    <div class="col-md-6 mb-3">
         <a href="/Standings" class="text-decoration-none" title="Click here to see how you stack up!">
             <div class="card text-center shadow-sm h-100">
                 <div class="card-body">
@@ -58,73 +58,128 @@
             </div>
         </a>
     </div>
+</div>
 
-    <!-- Picks for Current Week Tile -->
-    <div class="col-md-4 mb-3">
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <h5 class="card-title">Picks for This Week</h5>
-                <div class="mb-2 text-muted">
-                    @(Model.CurrentRace != null && !string.IsNullOrWhiteSpace(Model.CurrentRace.Name)
-                        ? $"{Model.CurrentRace.Name} — {Model.CurrentRace.Date.ToString("MMMM d, yyyy")}"
-                        : "N/A")
-                </div>
+<!-- Picks for Current Week and Player Results on the same row -->
+@if (Model.CurrentRace != null)
+{
+    <div class="row mb-4">
+        <!-- Picks for Current Week Tile -->
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Picks for This Week</h5>
+                    <div class="mb-2 text-muted">
+                        @(Model.CurrentRace != null && !string.IsNullOrWhiteSpace(Model.CurrentRace.Name)
+                            ? $"{Model.CurrentRace.Name} — {Model.CurrentRace.Date.ToString("MMMM d, yyyy")}"
+                            : "N/A")
+                    </div>
 
-                @{
+                    @{
 
-                    int? daysUntilRace = Model.CurrentRace != null ? (Model.CurrentRace.Date.Date - DateTime.Today).Days : (int?)null;
-                }
-
-                @if (Model.CurrentWeekPick != null)
-                {
-                    <ul class="list-group list-group-flush">
-                        <li class="list-group-item">Primary: @Model.CurrentWeekPick.Pick1?.Name (@Model.CurrentWeekPick.Pick1?.CarNumber)</li>
-                        <li class="list-group-item">Pick 2: @Model.CurrentWeekPick.Pick2?.Name (@Model.CurrentWeekPick.Pick2?.CarNumber)</li>
-                        <li class="list-group-item">Pick 3: @Model.CurrentWeekPick.Pick3?.Name (@Model.CurrentWeekPick.Pick3?.CarNumber)</li>
-                    </ul>
-
-                    @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
-                    {
-                        <div class="alert alert-warning mt-2 mb-2" role="alert">
-                            Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to change your picks.
-                        </div>
+                        int? daysUntilRace = Model.CurrentRace != null ? (Model.CurrentRace.Date.Date - DateTime.Today).Days : (int?)null;
                     }
 
-                    @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
+                    @if (Model.CurrentWeekPick != null)
                     {
-                        <a href="/Races/Picks/Edit/@Model.CurrentRace?.Id" class="btn btn-primary">Change your picks for this week</a>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">Primary: @Model.CurrentWeekPick.Pick1?.Name (@Model.CurrentWeekPick.Pick1?.CarNumber)</li>
+                            <li class="list-group-item">Pick 2: @Model.CurrentWeekPick.Pick2?.Name (@Model.CurrentWeekPick.Pick2?.CarNumber)</li>
+                            <li class="list-group-item">Pick 3: @Model.CurrentWeekPick.Pick3?.Name (@Model.CurrentWeekPick.Pick3?.CarNumber)</li>
+                        </ul>
+
+                        @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
+                        {
+                            <div class="alert alert-warning mt-2 mb-2" role="alert">
+                                Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to change your picks.
+                            </div>
+                        }
+
+                        @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
+                        {
+                            <a href="/Races/Picks/Edit/@Model.CurrentRace?.Id" class="btn btn-primary">Change your picks for this week</a>
+                        }
+                        else
+                        {
+                            <span title="You cannot change your picks on or after race day." tabindex="0">
+                                <a href="/Races/Picks/@Model.CurrentRace?.Id" class="btn btn-primary">See all picks for this week</a>
+                            </span>
+                        }
                     }
                     else
                     {
-                        <span title="You cannot change your picks on or after race day." tabindex="0">
-                            <a href="/Races/Picks/@Model.CurrentRace?.Id" class="btn btn-primary">See all picks for this week</a>
-                        </span>
-                    }
-                }
-                else
-                {
-                    <div class="text-secondary">You have not made picks for this week.</div>
+                        <div class="text-secondary">You have not made picks for this week.</div>
 
-                    @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
+                        @if (daysUntilRace.HasValue && daysUntilRace.Value >= 1 && daysUntilRace.Value <= 3)
+                        {
+                            <div class="alert alert-warning mt-2 mb-2" role="alert">
+                                Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to make your picks.
+                            </div>
+                        }
+
+                        @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
+                        {
+                            <a href="/Races/Pick/@Model.CurrentRace?.Id" class="btn btn-primary">Make your picks for this week</a>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Week Race Results Tile (Player Standings) -->
+        <div class="col-md-6 mb-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title">This Week's Player Results</h5>
+                    <div class="mb-2 text-muted">
+                        @Model.CurrentRace.Name — @Model.CurrentRace.Date.ToString("MMMM d, yyyy")
+                    </div>
+
+                    @if (Model.CurrentWeekPlayerResults != null && Model.CurrentWeekPlayerResults.Any())
                     {
-                        <div class="alert alert-warning mt-2 mb-2" role="alert">
-                            Hurry — only @daysUntilRace.Value day@(daysUntilRace.Value == 1 ? "" : "s") left to make your picks.
+                        <table class="table table-sm table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Place</th>
+                                    <th>Player</th>
+                                    <th>Points</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var result in Model.CurrentWeekPlayerResults)
+                                {
+                                    var isCurrentUser = result.PlayerName == User.Identity?.Name;
+                                    <tr class="@(isCurrentUser ? "table-primary" : "")">
+                                        <td class="fw-bold">@result.Place</td>
+                                        <td>@result.PlayerName @(isCurrentUser ? "(You)" : "")</td>
+                                        <td>@result.Points</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                        <a href="/Standings?raceId=@Model.CurrentRace.Id" class="btn btn-outline-primary btn-sm">View Full Details</a>
+                    }
+                    else if (Model.CurrentRace.Date <= DateTime.Today)
+                    {
+                        <div class="alert alert-info" role="alert">
+                            <strong>Results Coming Soon!</strong> Player results for this race are typically available within 2-3 days after the race concludes. Check back soon!
                         </div>
                     }
-
-                    @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
+                    else
                     {
-                        <a href="/Races/Pick/@Model.CurrentRace?.Id" class="btn btn-primary">Make your picks for this week</a>
+                        <div class="text-secondary">
+                            Player results will be available after the race is completed (typically within 2-3 days).
+                        </div>
                     }
-                }
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 <!-- Primary Driver Tile (First Half) -->
 <div class="row mb-4">
-    <div class="col-md-4 mb-3">
+    <div class="col-md-6 mb-3">
         <div class="card shadow-sm h-100">
             <div class="card-body text-center">
                 <h5 class="card-title">Primary Driver (First Half)</h5>
@@ -164,7 +219,7 @@
     </div>
 
     <!-- Primary Driver Tile (Second Half) -->
-    <div class="col-md-4 mb-3">
+    <div class="col-md-6 mb-3">
         <div class="card shadow-sm h-100">
             <div class="card-body text-center">
                 <h5 class="card-title">Primary Driver (Second Half)</h5>

@@ -44,6 +44,15 @@ namespace WebApp.Pages
         public Driver SecondHalfPrimaryDriver { get; set; }
         public Race SecondHalfFirstRace { get; set; }
 
+        public class PlayerRaceResult
+        {
+            public int Place { get; set; }
+            public string PlayerName { get; set; } = string.Empty;
+            public int Points { get; set; }
+        }
+
+        public IEnumerable<PlayerRaceResult>? CurrentWeekPlayerResults { get; set; }
+
         public async Task OnGetAsync()
         {
             try
