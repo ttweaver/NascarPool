@@ -78,18 +78,25 @@ namespace WebApp.Areas.Manage.Pages.Races.Picks
                 var raceIndex = Races.FindIndex(r => r.Id == RaceId);
                 var isFirstHalf = raceIndex >= 0 && raceIndex < half;
 
+                // Load all primary driver assignments for this pool
+                var primaryDriverAssignments = await _context.UserPoolPrimaryDrivers
+                    .Where(uppd => uppd.PoolId == Race.PoolId)
+                    .ToListAsync();
+
                 UserDefaultPick1 = new Dictionary<string, int?>();
                 foreach (var user in Users)
                 {
                     int? primaryDriverId = null;
-                    var userEntry = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
-                    if (userEntry != null)
+                    var userPoolDriver = primaryDriverAssignments.FirstOrDefault(uppd => uppd.UserId == user.Id);
+                    
+                    if (userPoolDriver != null)
                     {
                         if (isFirstHalf)
-                            primaryDriverId = userEntry.PrimaryDriverFirstHalfId;
+                            primaryDriverId = userPoolDriver.PrimaryDriverFirstHalfId;
                         else
-                            primaryDriverId = userEntry.PrimaryDriverSecondHalfId;
+                            primaryDriverId = userPoolDriver.PrimaryDriverSecondHalfId;
                     }
+                    
                     UserDefaultPick1[user.Id] = primaryDriverId;
                 }
 
@@ -147,18 +154,25 @@ namespace WebApp.Areas.Manage.Pages.Races.Picks
                 var raceIndex = Races.FindIndex(r => r.Id == RaceId);
                 var isFirstHalf = raceIndex >= 0 && raceIndex < half;
 
+                // Load all primary driver assignments for this pool
+                var primaryDriverAssignments = await _context.UserPoolPrimaryDrivers
+                    .Where(uppd => uppd.PoolId == Race.PoolId)
+                    .ToListAsync();
+
                 UserDefaultPick1 = new Dictionary<string, int?>();
                 foreach (var user in Users)
                 {
                     int? primaryDriverId = null;
-                    var userEntry = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
-                    if (userEntry != null)
+                    var userPoolDriver = primaryDriverAssignments.FirstOrDefault(uppd => uppd.UserId == user.Id);
+                    
+                    if (userPoolDriver != null)
                     {
                         if (isFirstHalf)
-                            primaryDriverId = userEntry.PrimaryDriverFirstHalfId;
+                            primaryDriverId = userPoolDriver.PrimaryDriverFirstHalfId;
                         else
-                            primaryDriverId = userEntry.PrimaryDriverSecondHalfId;
+                            primaryDriverId = userPoolDriver.PrimaryDriverSecondHalfId;
                     }
+                    
                     UserDefaultPick1[user.Id] = primaryDriverId;
                 }
 

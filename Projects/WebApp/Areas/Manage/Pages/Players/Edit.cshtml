@@ -5,14 +5,22 @@
 }
 <h1 class="mb-4">Edit Player</h1>
 
-<div class="mb-3">
-    <label for="poolSelect" class="form-label">Pool</label>
-    <select id="poolSelect" class="form-select" asp-items="Model.PoolOptions">
-    </select>
+<div class="alert alert-info mb-3">
+    <i class="bi bi-info-circle"></i> Primary driver selections are pool-specific. Select a pool to manage primary drivers for that season.
 </div>
 
 <form method="post" class="card card-body shadow-sm">
     <input type="hidden" asp-for="User.Id" />
+    <input type="hidden" asp-for="SelectedPoolId" id="hiddenPoolId" />
+
+    <div class="mb-3">
+        <label for="poolSelect" class="form-label"><i class="bi bi-calendar"></i> Pool / Season</label>
+        <select id="poolSelect" name="SelectedPoolId" class="form-select" asp-items="Model.PoolOptions">
+        </select>
+        <div class="form-text">Select the pool/season to manage primary drivers</div>
+    </div>
+
+    <hr />
 
     <div class="mb-3">
         <label asp-for="User.FirstName" class="form-label"></label>
@@ -38,21 +46,29 @@
         <span asp-validation-for="User.Email" class="text-danger"></span>
     </div>
 
+    <hr />
+
     <div class="mb-3">
-        <label asp-for="User.PrimaryDriverFirstHalfId" class="form-label">Primary Driver — First Half</label>
-        <select asp-for="User.PrimaryDriverFirstHalfId" class="form-select" asp-items="Model.DriverOptions">
+        <label asp-for="PrimaryDriverFirstHalfId" class="form-label">
+            <i class="bi bi-1-circle-fill text-primary"></i> Primary Driver — First Half
+        </label>
+        <select asp-for="PrimaryDriverFirstHalfId" class="form-select" asp-items="Model.DriverOptions">
             <option value="">-- None --</option>
         </select>
-        <span asp-validation-for="User.PrimaryDriverFirstHalfId" class="text-danger"></span>
+        <span asp-validation-for="PrimaryDriverFirstHalfId" class="text-danger"></span>
     </div>
 
     <div class="mb-3">
-        <label asp-for="User.PrimaryDriverSecondHalfId" class="form-label">Primary Driver — Second Half</label>
-        <select asp-for="User.PrimaryDriverSecondHalfId" class="form-select" asp-items="Model.DriverOptions">
+        <label asp-for="PrimaryDriverSecondHalfId" class="form-label">
+            <i class="bi bi-2-circle-fill text-success"></i> Primary Driver — Second Half
+        </label>
+        <select asp-for="PrimaryDriverSecondHalfId" class="form-select" asp-items="Model.DriverOptions">
             <option value="">-- None --</option>
         </select>
-        <span asp-validation-for="User.PrimaryDriverSecondHalfId" class="text-danger"></span>
+        <span asp-validation-for="PrimaryDriverSecondHalfId" class="text-danger"></span>
     </div>
+
+    <hr />
 
     <div class="form-check mb-3">
         <input asp-for="User.IsPlayer" class="form-check-input" />
@@ -61,8 +77,12 @@
     </div>
 
     <div class="d-flex gap-2">
-        <button type="submit" class="btn btn-primary">Save</button>
-        <a asp-page="Index" class="btn btn-secondary">Back to List</a>
+        <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-circle"></i> Save
+        </button>
+        <a asp-page="Index" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to List
+        </a>
     </div>
 </form>
 
@@ -70,13 +90,19 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const poolSelect = document.getElementById('poolSelect');
-            const driverSelect1 = document.querySelector('select[name="User.PrimaryDriverFirstHalfId"]');
-            const driverSelect2 = document.querySelector('select[name="User.PrimaryDriverSecondHalfId"]');
+            const hiddenPoolId = document.getElementById('hiddenPoolId');
+            const driverSelect1 = document.querySelector('select[name="PrimaryDriverFirstHalfId"]');
+            const driverSelect2 = document.querySelector('select[name="PrimaryDriverSecondHalfId"]');
 
             // Store all driver options with their pool IDs
             const allDriverOptions = @Html.Raw(Model.AllDriversJson);
 
             function updateDriverOptions(poolId) {
+                // Update hidden field
+                if (hiddenPoolId) {
+                    hiddenPoolId.value = poolId;
+                }
+
                 // Filter drivers by selected pool
                 const filteredDrivers = poolId 
                     ? allDriverOptions.filter(d => d.poolId == poolId)

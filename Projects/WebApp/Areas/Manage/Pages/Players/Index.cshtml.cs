@@ -16,7 +16,40 @@ namespace WebApp.Areas.Manage.Pages.Players
             _logger = logger;
         }
 
-        public IList<ApplicationUser> Users { get; set; } = default!;
+        public IList<UserViewModel> Users { get; set; } = default!;
+        public Pool? CurrentPool { get; set; }
+
+        public class UserViewModel
+        {
+            public string Id { get; set; } = string.Empty;
+            public string FirstName { get; set; } = string.Empty;
+            public string LastName { get; set; } = string.Empty;
+            public string Email { get; set; } = string.Empty;
+            public Driver? PrimaryDriverFirstHalf { get; set; }
+            public Driver? PrimaryDriverSecondHalf { get; set; }
+        }
+
+        private Pool? GetCurrentSeasonFromCookie()
+        {
+            // Try to get poolId from cookie
+            var poolIdCookie = Request.Cookies["poolId"];
+            Pool? currentSeason = null;
+
+            if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
+            {
+                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+            }
+
+            // Fallback to latest season if cookie not found or invalid
+            if (currentSeason == null)
+            {
+                currentSeason = _context.Pools.AsEnumerable()
+                    .OrderByDescending(s => s.CurrentYear)
+                    .FirstOrDefault();
+            }
+
+            return currentSeason;
+        }
 
         public async Task OnGetAsync()
         {
@@ -24,12 +57,46 @@ namespace WebApp.Areas.Manage.Pages.Players
             {
                 _logger.LogInformation("User {UserId} accessed Users Index page", User.Identity?.Name ?? "Anonymous");
                 
-                Users = await _context.Users.Players()
-                                            .Include(d => d.PrimaryDriverFirstHalf)
-                                            .Include(d => d.PrimaryDriverSecondHalf)
-                                            .OrderBy(p => p.FirstName).ToListAsync();
+                CurrentPool = GetCurrentSeasonFromCookie();
                 
-                _logger.LogInformation("Successfully loaded {Count} users", Users.Count);
+                if (CurrentPool == null)
+                {
+                    _logger.LogWarning("No current pool found");
+                    Users = new List<UserViewModel>();
+                    return;
+                }
+
+                _logger.LogInformation("Loading players for pool {PoolId} ({PoolName})", CurrentPool.Id, CurrentPool.Name);
+
+                // Get all player users
+                var players = await _context.Users
+                    .Where(u => u.IsPlayer)
+                    .OrderBy(p => p.FirstName)
+                    .ToListAsync();
+
+                // Get all primary driver assignments for the current pool
+                var primaryDrivers = await _context.UserPoolPrimaryDrivers
+                    .Include(uppd => uppd.PrimaryDriverFirstHalf)
+                    .Include(uppd => uppd.PrimaryDriverSecondHalf)
+                    .Where(uppd => uppd.PoolId == CurrentPool.Id)
+                    .ToListAsync();
+
+                // Build view models
+                Users = players.Select(player =>
+                {
+                    var poolDriver = primaryDrivers.FirstOrDefault(pd => pd.UserId == player.Id);
+                    return new UserViewModel
+                    {
+                        Id = player.Id,
+                        FirstName = player.FirstName,
+                        LastName = player.LastName,
+                        Email = player.Email ?? string.Empty,
+                        PrimaryDriverFirstHalf = poolDriver?.PrimaryDriverFirstHalf,
+                        PrimaryDriverSecondHalf = poolDriver?.PrimaryDriverSecondHalf
+                    };
+                }).ToList();
+                
+                _logger.LogInformation("Successfully loaded {Count} users for pool {PoolName}", Users.Count, CurrentPool.Name);
             }
             catch (Exception ex)
             {
