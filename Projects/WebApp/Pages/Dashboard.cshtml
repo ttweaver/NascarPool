@@ -20,20 +20,44 @@
 </div>
 
 <div class="row mb-4">
-    <!-- Overall Place Tile (clickable, with tooltip) -->
-    <div class="col-md-6 mb-3">
+    <!-- Combined Overall Place and Total Points Tile (clickable, with tooltip) -->
+    <div class="col-md-12 mb-3">
         <div class="card text-center shadow-sm h-100 border-primary">
             <a href="/Standings" class="text-decoration-none" title="Click here to see how you stack up!">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-trophy-fill text-warning"></i> Overall Place</h5>
-                    @if (!Model.HasResults)
-                    {
-                        <div class="text-secondary"><i class="bi bi-hourglass-split"></i> There are no standings available yet for this season.</div>
-                    }
-                    else
-                    {
-                        <div class="display-4 fw-bold text-primary"><i class="bi bi-award-fill"></i> @Model.OverallPlace</div>
-                    }
+                    <div class="row">
+                        <div class="col-md-6 border-end">
+                            <h5 class="card-title"><i class="bi bi-trophy-fill text-warning"></i> Overall Place</h5>
+                            @if (!Model.HasResults)
+                            {
+                                <div class="text-secondary"><i class="bi bi-hourglass-split"></i> There are no standings available yet for this season.</div>
+                            }
+                            else if (Model.OverallPlace == 0)
+                            {
+                                <div class="text-secondary"><i class="bi bi-info-circle"></i> You haven't competed in any completed races yet.</div>
+                            }
+                            else
+                            {
+                                <div class="display-4 fw-bold text-primary"><i class="bi bi-award-fill"></i> @Model.OverallPlace</div>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            <h5 class="card-title"><i class="bi bi-graph-up-arrow text-success"></i> Total Points</h5>
+                            @if (!Model.HasResults)
+                            {
+                                <div class="text-secondary"><i class="bi bi-hourglass-split"></i> No points available yet for this season.</div>
+                            }
+                            else if (Model.TotalPoints == 0)
+                            {
+                                <div class="text-secondary"><i class="bi bi-info-circle"></i> You haven't earned any points yet. Make your picks to start scoring!</div>
+                            }
+                            else
+                            {
+                                <div class="display-4 fw-bold text-success"><i class="bi bi-star-fill"></i> @Model.TotalPoints</div>
+                            }
+                            <div class="mt-2 text-muted"><i class="bi bi-flag-fill text-danger"></i> Races this season: @Model.TotalRaces</div>
+                        </div>
+                    </div>
                 </div>
             </a>
             
@@ -80,26 +104,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Total Points Tile (clickable, with tooltip) -->
-    <div class="col-md-6 mb-3">
-        <a href="/Standings" class="text-decoration-none" title="Click here to see how you stack up!">
-            <div class="card text-center shadow-sm h-100 border-success">
-                <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-graph-up-arrow text-success"></i> Total Points</h5>
-                    @if (!Model.HasResults)
-                    {
-                        <div class="text-secondary"><i class="bi bi-hourglass-split"></i> No points available yet for this season.</div>
-                    }
-                    else
-                    {
-                        <div class="display-4 fw-bold text-success"><i class="bi bi-star-fill"></i> @Model.TotalPoints</div>
-                    }
-                    <div class="mt-2 text-muted"><i class="bi bi-flag-fill text-danger"></i> Races this season: @Model.TotalRaces</div>
-                </div>
-            </div>
-        </a>
-    </div>
 </div>
 
 <!-- Picks for Current Week and Player Results on the same row -->
@@ -140,7 +144,9 @@
 
                         @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
                         {
-                            <a href="/Races/Picks/Edit/@Model.CurrentRace?.Id" class="btn btn-primary"><i class="bi bi-pencil-square"></i> Change your picks for this week</a>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editPicksModal">
+                                <i class="bi bi-pencil-square"></i> Change your picks for this week
+                            </button>
                         }
                         else
                         {
@@ -162,7 +168,9 @@
 
                         @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
                         {
-                            <a href="/Races/Pick/@Model.CurrentRace?.Id" class="btn btn-primary"><i class="bi bi-plus-circle-fill"></i> Make your picks for this week</a>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editPicksModal">
+                                <i class="bi bi-plus-circle-fill"></i> Make your picks for this week
+                            </button>
                         }
                     }
                 </div>
@@ -235,6 +243,93 @@
                         </div>
                     }
                 </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit Picks Modal -->
+@if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
+{
+    <div class="modal fade" id="editPicksModal" tabindex="-1" aria-labelledby="editPicksModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="editPicksModalLabel">
+                        <i class="bi bi-hand-index-thumb-fill"></i> @(Model.CurrentWeekPick != null ? "Change Your Picks" : "Make Your Picks")
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" asp-page-handler="SavePicks" id="picksForm">
+                    <div class="modal-body">
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle-fill"></i> <strong>@Model.CurrentRace.Name</strong> — @Model.CurrentRace.Date.ToString("MMMM d, yyyy")
+                        </div>
+
+                        <input type="hidden" name="RaceId" value="@Model.CurrentRace.Id" />
+
+                        <div class="mb-3">
+                            <label for="pick1Select" class="form-label">
+                                <i class="bi bi-star-fill text-warning"></i> <strong>Primary Driver</strong>
+                            </label>
+                            <select id="pick1Select" name="Pick1Id" class="form-select" disabled>
+                                <option value="">-- Select Driver --</option>
+                                @foreach (var driver in Model.AvailableDrivers)
+                                {
+                                    <option value="@driver.Id" selected="@(Model.CurrentWeekPick?.Pick1Id == driver.Id)">
+                                        @driver.Name (@driver.CarNumber)
+                                    </option>
+                                }
+                            </select>
+                            <input type="hidden" name="Pick1Id" value="@(Model.CurrentWeekPick?.Pick1Id ?? Model.GetPrimaryDriverIdForCurrentRace())" />
+                            <div class="form-text"><i class="bi bi-lock-fill"></i> Your primary driver is automatically set based on your primary driver selection.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="pick2Select" class="form-label">
+                                <i class="bi bi-2-circle-fill text-info"></i> <strong>Pick 2</strong>
+                            </label>
+                            <select id="pick2Select" name="Pick2Id" class="form-select" required>
+                                <option value="">-- Select Driver --</option>
+                                @foreach (var driver in Model.AvailableDrivers)
+                                {
+                                    <option value="@driver.Id" selected="@(Model.CurrentWeekPick?.Pick2Id == driver.Id)">
+                                        @driver.Name (@driver.CarNumber)
+                                    </option>
+                                }
+                            </select>
+                            <span class="invalid-feedback" id="pick2Error"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="pick3Select" class="form-label">
+                                <i class="bi bi-3-circle-fill text-success"></i> <strong>Pick 3</strong>
+                            </label>
+                            <select id="pick3Select" name="Pick3Id" class="form-select" required>
+                                <option value="">-- Select Driver --</option>
+                                @foreach (var driver in Model.AvailableDrivers)
+                                {
+                                    <option value="@driver.Id" selected="@(Model.CurrentWeekPick?.Pick3Id == driver.Id)">
+                                        @driver.Name (@driver.CarNumber)
+                                    </option>
+                                }
+                            </select>
+                            <span class="invalid-feedback" id="pick3Error"></span>
+                        </div>
+
+                        <div class="alert alert-warning" id="validationError" style="display: none;">
+                            <i class="bi bi-exclamation-triangle-fill"></i> <span id="validationErrorText"></span>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="savePicksBtn">
+                            <i class="bi bi-check-circle"></i> Save Picks
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -351,22 +446,32 @@
                 </div>
 
                 <div id="raceResultsContent" class="mt-3">
-                    @* Race selector: only show when there are races with results *@
+                    @* Race selector: only show races that have already happened *@
                     @if (Model.RacesWithResults != null && Model.RacesWithResults.Any())
                     {
-                        var selectedRaceId = Model.RecentResults?.OrderByDescending(rr => rr.Id).FirstOrDefault()?.Race?.Id ?? Model.RacesWithResults.First().Id;
-                        <div class="mb-2 d-flex align-items-center">
-                            <label for="raceSelect" class="me-2 mb-0"><i class="bi bi-filter-circle text-primary"></i> Race:</label>
-                            <select id="raceSelect" class="form-select w-auto">
-                                @foreach (var race in Model.RacesWithResults)
-                                {
-                                    var optSelected = race.Id == selectedRaceId ? "selected" : "";
-                                    <option value="@race.Id" data-name="@race.Name" data-date="@race.Date.ToString("MMMM d, yyyy")" selected="@(optSelected == "selected" ? "selected" : null)">
-                                        @race.Name — @race.Date.ToString("MMMM d, yyyy")
-                                    </option>
-                                }
-                            </select>
-                        </div>
+                        var completedRaces = Model.RacesWithResults.Where(r => r.Date <= DateTime.Today).ToList();
+                        @if (completedRaces.Any())
+                        {
+                            var selectedRaceId = Model.RecentResults?.OrderByDescending(rr => rr.Id).FirstOrDefault()?.Race?.Id ?? completedRaces.First().Id;
+                            <div class="mb-2 d-flex align-items-center">
+                                <label for="raceSelect" class="me-2 mb-0"><i class="bi bi-filter-circle text-primary"></i> Race:</label>
+                                <select id="raceSelect" class="form-select w-auto">
+                                    @foreach (var race in completedRaces)
+                                    {
+                                        var optSelected = race.Id == selectedRaceId ? "selected" : "";
+                                        <option value="@race.Id" data-name="@race.Name" data-date="@race.Date.ToString("MMMM d, yyyy")" selected="@(optSelected == "selected" ? "selected" : null)">
+                                            @race.Name — @race.Date.ToString("MMMM d, yyyy")
+                                        </option>
+                                    }
+                                </select>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="text-secondary mb-2">
+                                <i class="bi bi-hourglass-split"></i> No races have been completed yet this season.
+                            </div>
+                        }
                     }
                     else
                     {
@@ -374,7 +479,14 @@
                             @if (Model.RecentResults != null && Model.RecentResults.Any() && Model.RecentResults.FirstOrDefault()?.Race?.Name != null)
                             {
                                 var recentRace = Model.RecentResults.FirstOrDefault().Race;
-                                <i class="bi bi-calendar-check text-info"></i> @($"{recentRace.Name} — {recentRace.Date.ToString("MMMM d, yyyy")}")
+                                @if (recentRace.Date <= DateTime.Today)
+                                {
+                                    <i class="bi bi-calendar-check text-info"></i> @($"{recentRace.Name} — {recentRace.Date.ToString("MMMM d, yyyy")}")
+                                }
+                                else
+                                {
+                                    <i class="bi bi-hourglass-split"></i> <span>No races have been completed yet this season.</span>
+                                }
                             }
                         </div>
                     }
@@ -410,7 +522,7 @@
                         <tbody id="resultsBody">
                             @if (Model.AllRecentResults != null && Model.AllRecentResults.Any())
                             {
-                                foreach (var result in Model.AllRecentResults)
+                                foreach (var result in Model.AllRecentResults.Where(r => r.Race.Date <= DateTime.Today))
                                 {
                                     var isUserPick = Model.UserPicksByRaceId.ContainsKey(result.Race.Id) 
                                         && Model.UserPicksByRaceId[result.Race.Id].Contains(result.Driver.Id);
@@ -446,7 +558,7 @@
                             }
                             else if (Model.RecentResults != null && Model.RecentResults.Any())
                             {
-                                foreach (var result in Model.RecentResults)
+                                foreach (var result in Model.RecentResults.Where(r => r.Race.Date <= DateTime.Today))
                                 {
                                     var isUserPick = Model.UserPicksByRaceId.ContainsKey(result.Race.Id) 
                                         && Model.UserPicksByRaceId[result.Race.Id].Contains(result.Driver.Id);

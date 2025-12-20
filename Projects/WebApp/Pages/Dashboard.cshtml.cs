@@ -55,6 +55,27 @@ namespace WebApp.Pages
 
         public Dictionary<int, HashSet<int>> UserPicksByRaceId { get; set; } = new();
 
+        public int GetPrimaryDriverIdForCurrentRace()
+        {
+            if (CurrentRace == null) return 0;
+
+            var currentSeason = _context.Pools.OrderByDescending(p => p.Year).FirstOrDefault();
+            if (currentSeason == null) return 0;
+
+            var seasonRaces = _context.Races
+                .Where(r => r.PoolId == currentSeason.Id)
+                .OrderBy(r => r.Date)
+                .ToList();
+
+            if (!seasonRaces.Any()) return 0;
+
+            int half = seasonRaces.Count / 2;
+            int raceIndex = seasonRaces.FindIndex(r => r.Id == CurrentRace.Id);
+            bool isFirstHalf = raceIndex >= 0 && raceIndex < half;
+
+            return isFirstHalf ? (PrimaryDriver?.Id ?? 0) : (SecondHalfPrimaryDriver?.Id ?? 0);
+        }
+
         public async Task OnGetAsync()
         {
             try
@@ -74,18 +95,23 @@ namespace WebApp.Pages
                     return;
                 }
 
-                var seasonRaceIds = await _context.Races
-                    .Where(r => r.Pool.Id == currentSeason.Id)
+                // Only include races that have already occurred for standings calculations
+                var completedSeasonRaceIds = await _context.Races
+                    .Where(r => r.Pool.Id == currentSeason.Id && r.Date <= DateTime.Today)
                     .Select(r => r.Id)
                     .ToListAsync();
                 
-                TotalRaces = seasonRaceIds.Count;
+                // Total races includes all races (for display purposes)
+                TotalRaces = await _context.Races
+                    .Where(r => r.Pool.Id == currentSeason.Id)
+                    .CountAsync();
 
+                // Calculate standings only from completed races
                 var standings = await _context.Picks
-                    .Where(p => seasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer)
+                    .Where(p => completedSeasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer)
                     .GroupBy(p => p.UserId)
                     .Select(g => new { UserId = g.Key, TotalPoints = g.Sum(p => p.Points) })
-                    .OrderBy(s => s.TotalPoints)
+                    .OrderByDescending(s => s.TotalPoints)
                     .ToListAsync();
 
                 HasResults = false;
@@ -99,7 +125,7 @@ namespace WebApp.Pages
                 }
 
                 var recentRace = await _context.Races
-                    .Where(r => r.Pool.Id == currentSeason.Id && r.Date <= latestResultsRaceDate)
+                    .Where(r => r.Pool.Id == currentSeason.Id && r.Date <= latestResultsRaceDate && r.Date <= DateTime.Today)
                     .OrderByDescending(r => r.Date)
                     .FirstOrDefaultAsync();
 
@@ -107,6 +133,7 @@ namespace WebApp.Pages
                 {
                     RecentResults = await _context.RaceResults
                         .Where(r => r.RaceId == recentRace.Id)
+                        .Where(r => r.Race.Date <= DateTime.Today)
                         .OrderBy(r => r.Place)
                         .Include(r => r.Driver)
                         .Include(r => r.Race)
@@ -115,6 +142,7 @@ namespace WebApp.Pages
 
                 RacesWithResults = await _context.Races
                     .Where(r => r.Pool.Id == currentSeason.Id && _context.RaceResults.Any(rr => rr.RaceId == r.Id))
+                    .Where(r => r.Date.Date <= DateTime.Today)
                     .OrderBy(r => r.Date)
                     .ToListAsync();
 
@@ -124,12 +152,13 @@ namespace WebApp.Pages
                         .Include(rr => rr.Driver)
                         .Include(rr => rr.Race)
                         .Where(rr => RacesWithResults.Select(r => r.Id).Contains(rr.RaceId))
+                        .Where(rr => rr.Race.Date <= DateTime.Today)
                         .OrderByDescending(rr => rr.Race.Date)
                         .ThenBy(rr => rr.Place)
                         .ToListAsync();
                 }
 
-                // Load user's picks for all races with results
+                // Load user's picks for all races with results (only completed races)
                 if (RacesWithResults.Any())
                 {
                     var raceIdsWithResults = RacesWithResults.Select(r => r.Id).ToList();
@@ -187,10 +216,16 @@ namespace WebApp.Pages
                     .OrderBy(r => r.Date)
                     .FirstOrDefaultAsync();
 
-                if (seasonRaceIds.Count > 0)
+                var allSeasonRaceIds = await _context.Races
+                    .Where(r => r.Pool.Id == currentSeason.Id)
+                    .OrderBy(r => r.Date)
+                    .Select(r => r.Id)
+                    .ToListAsync();
+
+                if (allSeasonRaceIds.Count > 0)
                 {
-                    int midpointIndex = seasonRaceIds.Count / 2;
-                    var midpointRaceId = seasonRaceIds.OrderBy(id => id).ElementAt(midpointIndex);
+                    int midpointIndex = allSeasonRaceIds.Count / 2;
+                    var midpointRaceId = allSeasonRaceIds.ElementAt(midpointIndex);
 
                     SecondHalfFirstRace = await _context.Races
                         .Where(r => r.Id == midpointRaceId)
@@ -215,8 +250,9 @@ namespace WebApp.Pages
                         .Select(rr => rr.DriverId)
                         .ToListAsync();
 
+                    // Only include picks from completed races for participant determination
                     var participantUserIds = await _context.Picks
-                        .Where(p => seasonRaceIds.Contains(p.RaceId))
+                        .Where(p => completedSeasonRaceIds.Contains(p.RaceId))
                         .Select(p => p.UserId)
                         .Distinct()
                         .ToListAsync();
@@ -252,6 +288,133 @@ namespace WebApp.Pages
             {
                 _logger.LogError(ex, "Error loading dashboard for user {UserId}", UserId);
                 throw;
+            }
+        }
+
+        public async Task<IActionResult> OnPostSavePicksAsync(int RaceId, int Pick1Id, int Pick2Id, int Pick3Id)
+        {
+            try
+            {
+                var userId = _userManager.GetUserId(User);
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+
+                _logger.LogInformation("User {UserId} ({Email}) attempting to save picks for race {RaceId}. " +
+                    "Pick1Id: {Pick1}, Pick2Id: {Pick2}, Pick3Id: {Pick3}, IP: {IpAddress}", 
+                    userId, User.Identity?.Name ?? "Anonymous", RaceId, Pick1Id, Pick2Id, Pick3Id, ipAddress);
+
+                var race = await _context.Races.Include(r => r.Pool).FirstOrDefaultAsync(r => r.Id == RaceId);
+                if (race == null)
+                {
+                    _logger.LogWarning("Race not found during pick save. RaceId: {RaceId}, UserId: {UserId}", 
+                        RaceId, userId);
+                    TempData["Error"] = "Race not found.";
+                    return RedirectToPage();
+                }
+
+                if (DateTime.Today >= race.Date)
+                {
+                    _logger.LogWarning("User {UserId} attempted to save picks on/after race day. RaceId: {RaceId}, RaceDate: {RaceDate}, IP: {IpAddress}", 
+                        userId, RaceId, race.Date, ipAddress);
+                    TempData["Error"] = "Picks cannot be entered on or after race day.";
+                    return RedirectToPage();
+                }
+
+                if (string.IsNullOrEmpty(userId))
+                {
+                    _logger.LogWarning("User ID is null during pick save attempt. RaceId: {RaceId}", RaceId);
+                    return Challenge();
+                }
+
+                // Validate picks
+                if (Pick1Id == 0 || Pick2Id == 0 || Pick3Id == 0)
+                {
+                    _logger.LogWarning("Pick validation failed - missing driver selection. UserId: {UserId}, RaceId: {RaceId}, " +
+                        "Pick1: {Pick1}, Pick2: {Pick2}, Pick3: {Pick3}, IP: {IpAddress}", 
+                        userId, RaceId, Pick1Id, Pick2Id, Pick3Id, ipAddress);
+                    TempData["Error"] = "All three picks are required.";
+                    return RedirectToPage();
+                }
+
+                // Check for duplicate picks
+                var picksSet = new HashSet<int> { Pick1Id, Pick2Id, Pick3Id };
+                if (picksSet.Count < 3)
+                {
+                    _logger.LogWarning("Pick validation failed - duplicate drivers selected. UserId: {UserId}, RaceId: {RaceId}, " +
+                        "Pick1: {Pick1}, Pick2: {Pick2}, Pick3: {Pick3}, IP: {IpAddress}", 
+                        userId, RaceId, Pick1Id, Pick2Id, Pick3Id, ipAddress);
+                    TempData["Error"] = "You cannot select the same driver multiple times.";
+                    return RedirectToPage();
+                }
+
+                var pick = await _context.Picks.FirstOrDefaultAsync(p => p.RaceId == RaceId && p.UserId == userId);
+
+                // Get driver names for logging
+                var drivers = await _context.Drivers.Where(d => 
+                    d.Id == Pick1Id || d.Id == Pick2Id || d.Id == Pick3Id).ToListAsync();
+                var pick1Name = drivers.FirstOrDefault(d => d.Id == Pick1Id)?.Name ?? $"ID:{Pick1Id}";
+                var pick2Name = drivers.FirstOrDefault(d => d.Id == Pick2Id)?.Name ?? $"ID:{Pick2Id}";
+                var pick3Name = drivers.FirstOrDefault(d => d.Id == Pick3Id)?.Name ?? $"ID:{Pick3Id}";
+
+                if (pick == null)
+                {
+                    pick = new Pick
+                    {
+                        RaceId = RaceId,
+                        UserId = userId,
+                        Pick1Id = Pick1Id,
+                        Pick2Id = Pick2Id,
+                        Pick3Id = Pick3Id
+                    };
+                    _context.Picks.Add(pick);
+
+                    _logger.LogInformation("New picks created for user {UserId} on race {RaceId} ({RaceName}). " +
+                        "Pick1: {Pick1Name} (#{Pick1Car}), Pick2: {Pick2Name} (#{Pick2Car}), Pick3: {Pick3Name} (#{Pick3Car}), IP: {IpAddress}", 
+                        userId, RaceId, race.Name, 
+                        pick1Name, drivers.FirstOrDefault(d => d.Id == Pick1Id)?.CarNumber,
+                        pick2Name, drivers.FirstOrDefault(d => d.Id == Pick2Id)?.CarNumber,
+                        pick3Name, drivers.FirstOrDefault(d => d.Id == Pick3Id)?.CarNumber,
+                        ipAddress);
+                    
+                    TempData["Success"] = "Your picks have been saved successfully!";
+                }
+                else
+                {
+                    // Capture original values for logging
+                    var originalDrivers = await _context.Drivers.Where(d => 
+                        d.Id == pick.Pick1Id || d.Id == pick.Pick2Id || d.Id == pick.Pick3Id).ToListAsync();
+                    var oldPick1Name = originalDrivers.FirstOrDefault(d => d.Id == pick.Pick1Id)?.Name ?? $"ID:{pick.Pick1Id}";
+                    var oldPick2Name = originalDrivers.FirstOrDefault(d => d.Id == pick.Pick2Id)?.Name ?? $"ID:{pick.Pick2Id}";
+                    var oldPick3Name = originalDrivers.FirstOrDefault(d => d.Id == pick.Pick3Id)?.Name ?? $"ID:{pick.Pick3Id}";
+
+                    pick.Pick1Id = Pick1Id;
+                    pick.Pick2Id = Pick2Id;
+                    pick.Pick3Id = Pick3Id;
+                    _context.Picks.Update(pick);
+
+                    _logger.LogInformation("Picks updated for user {UserId} on race {RaceId} ({RaceName}). " +
+                        "Pick1: {OldPick1} -> {NewPick1}, Pick2: {OldPick2} -> {NewPick2}, Pick3: {OldPick3} -> {NewPick3}, IP: {IpAddress}", 
+                        userId, RaceId, race.Name, 
+                        oldPick1Name, pick1Name, 
+                        oldPick2Name, pick2Name, 
+                        oldPick3Name, pick3Name, 
+                        ipAddress);
+
+                    TempData["Success"] = "Your picks have been updated successfully!";
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Picks saved successfully for user {UserId} on race {RaceId}. PickId: {PickId}", 
+                    userId, RaceId, pick.Id);
+
+                return RedirectToPage();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving picks for race {RaceId}, User: {UserId}", 
+                    RaceId, _userManager.GetUserId(User));
+                TempData["Error"] = "An error occurred while saving your picks. Please try again.";
+                return RedirectToPage();
             }
         }
 
@@ -489,17 +652,27 @@ namespace WebApp.Pages
                     var oldPick1Id = pick.Pick1Id;
                     pick.Pick1Id = newPrimaryDriverId;
 
-                    // Recalculate points for this pick using existing race results
-                    var raceResults = await _context.RaceResults
-                        .Where(rr => rr.RaceId == pick.RaceId)
-                        .ToListAsync();
+                    // Recalculate points for this pick using existing race results (only if race has occurred)
+                    var race = await _context.Races.FirstOrDefaultAsync(r => r.Id == pick.RaceId);
+                    if (race != null && race.Date <= DateTime.Today)
+                    {
+                        var raceResults = await _context.RaceResults
+                            .Where(rr => rr.RaceId == pick.RaceId)
+                            .ToListAsync();
 
-                    var oldPoints = pick.Points;
-                    pick.CalculateTotalPoints(_context, raceResults);
+                        var oldPoints = pick.Points;
+                        pick.CalculateTotalPoints(_context, raceResults);
 
-                    _logger.LogDebug("Pick updated for user {UserId}. PickId: {PickId}, RaceId: {RaceId}, " +
-                        "Pick1: {OldDriverId} -> {NewDriverId}, Points: {OldPoints} -> {NewPoints}", 
-                        userId, pick.Id, pick.RaceId, oldPick1Id, newPrimaryDriverId, oldPoints, pick.Points);
+                        _logger.LogDebug("Pick updated for user {UserId}. PickId: {PickId}, RaceId: {RaceId}, " +
+                            "Pick1: {OldDriverId} -> {NewDriverId}, Points: {OldPoints} -> {NewPoints}", 
+                            userId, pick.Id, pick.RaceId, oldPick1Id, newPrimaryDriverId, oldPoints, pick.Points);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Pick updated for user {UserId}. PickId: {PickId}, RaceId: {RaceId}, " +
+                            "Pick1: {OldDriverId} -> {NewDriverId}, Points: Not recalculated (race not completed)", 
+                            userId, pick.Id, pick.RaceId, oldPick1Id, newPrimaryDriverId);
+                    }
 
                     updatedCount++;
                 }

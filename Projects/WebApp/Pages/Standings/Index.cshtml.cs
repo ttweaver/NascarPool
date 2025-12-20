@@ -96,8 +96,11 @@ namespace WebApp.Pages.Standings
             if (currentSeason == null)
                 return;
 
+            var now = DateTime.UtcNow;
+
+            // Only get races that have already occurred
             var seasonRaces = await _context.Races
-                .Where(r => r.Pool.Id == currentSeason.Id)
+                .Where(r => r.Pool.Id == currentSeason.Id && r.Date < now)
                 .OrderBy(r => r.Date)
                 .Select(r => new { r.Id, r.Name })
                 .ToListAsync();
@@ -107,7 +110,7 @@ namespace WebApp.Pages.Standings
             if (!seasonRaceIds.Any())
                 return;
 
-            // Calculate current week number based on races with picks
+            // Calculate current week number based on races with picks that have occurred
             var racesWithPicks = await _context.Picks
                 .Where(p => seasonRaceIds.Contains(p.RaceId))
                 .Select(p => p.RaceId)
@@ -186,8 +189,11 @@ namespace WebApp.Pages.Standings
             if (currentSeason == null)
                 return new JsonResult(new WeeklyStandingsResponse());
 
+            var now = DateTime.UtcNow;
+
+            // Only get races that have already occurred
             var seasonRaces = await _context.Races
-                .Where(r => r.Pool.Id == currentSeason.Id)
+                .Where(r => r.Pool.Id == currentSeason.Id && r.Date < now)
                 .OrderBy(r => r.Date)
                 .Select(r => new { r.Id, r.Name })
                 .ToListAsync();
@@ -271,8 +277,11 @@ namespace WebApp.Pages.Standings
             if (currentSeason == null)
                 return new JsonResult(new ChartDataResponse());
 
+            var now = DateTime.UtcNow;
+
+            // Only get races that have already occurred
             var seasonRaces = await _context.Races
-                .Where(r => r.Pool.Id == currentSeason.Id)
+                .Where(r => r.Pool.Id == currentSeason.Id && r.Date < now)
                 .OrderBy(r => r.Date)
                 .Select(r => new { r.Id, r.Name })
                 .ToListAsync();
@@ -353,8 +362,11 @@ namespace WebApp.Pages.Standings
             if (currentSeason == null)
                 return new JsonResult(new CumulativeProgressionResponse());
 
+            var now = DateTime.UtcNow;
+
+            // Only get races that have already occurred
             var seasonRaces = await _context.Races
-                .Where(r => r.Pool.Id == currentSeason.Id)
+                .Where(r => r.Pool.Id == currentSeason.Id && r.Date < now)
                 .OrderBy(r => r.Date)
                 .Select(r => new { r.Id, r.Name })
                 .ToListAsync();

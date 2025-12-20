@@ -5,20 +5,15 @@ using WebApp.Data;
 using WebApp.Models;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Identity;
 
 namespace WebApp.Pages.Races.Picks
 {
     public class IndexModel : PageModel
     {
         private readonly ApplicationDbContext _context;
-        private readonly UserManager<ApplicationUser> _userManager;
-        public IndexModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
-        {
-            _context = context;
-            _userManager = userManager;
-        }
+        public IndexModel(ApplicationDbContext context) => _context = context;
 
         [BindProperty(SupportsGet = true)]
         public int RaceId { get; set; }
@@ -42,12 +37,13 @@ namespace WebApp.Pages.Races.Picks
 
         public async Task<IActionResult> OnGetAsync()
         {
-            CurrentUserId = _userManager.GetUserId(User);
+            CurrentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             Race = await _context.Races
                 .Include(r => r.Pool)
                 .ThenInclude(p => p.Members)
-                .FirstOrDefaultAsync(r => r.Id == RaceId);
+				.Where(r => r.Id == RaceId && r.Date <= DateTime.Now)
+				.FirstOrDefaultAsync(r => r.Id == RaceId);
 
             if (Race == null)
                 return NotFound();

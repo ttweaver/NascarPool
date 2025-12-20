@@ -38,9 +38,11 @@ builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizeAreaFolder("Manage", "/", "AdminPolicy");
 
-    options.Conventions.AuthorizeFolder("/Races");
+	options.Conventions.AuthorizePage("/Dashboard");
+    options.Conventions.AuthorizeFolder("/DriverStats");
+	options.Conventions.AuthorizeFolder("/Races");
     options.Conventions.AuthorizeFolder("/Standings");
-    options.Conventions.AuthorizePage("/Dashboard");
+    
 });
 
 builder.Services.AddAuthentication()
