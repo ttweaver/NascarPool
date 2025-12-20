@@ -26,15 +26,31 @@
             font-weight: bold;
             margin-left: 8px;
         }
+        .brand-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.125rem;
+        }
+        .navbar-brand {
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
     </style>
 </head>
 <body>
     <header>
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3 @(Context.Request.Path.StartsWithSegments("/Manage") ? "manager-mode-indicator" : "")">
             <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Index">
-                    Fast Lap Fantasy
-                </a>
+                <div class="brand-container">
+                    <a class="navbar-brand" asp-area="" asp-page="/Index">
+                        Fast Lap Fantasy
+                    </a>
+                    @if (SignInManager.IsSignedIn(User))
+                    {
+                        @await Component.InvokeAsync("PoolSelector")
+                    }
+                </div>
                 @if (Context.Request.Path.StartsWithSegments("/Manage"))
                 {
                     <span class="manager-mode-badge">MANAGER MODE</span>
@@ -90,31 +106,37 @@
                             }
                         }
                     </ul>
-                    <partial name="_LoginPartial" />
-                    @if (SignInManager.IsSignedIn(User) && User.IsInRole("Admin"))
-                    {
-                        <div class="d-flex align-items-center ms-2">
-                            @if (Context.Request.Path.StartsWithSegments("/Manage"))
-                            {
-                                <a class="btn btn-sm btn-outline-primary" asp-area="" asp-page="/Dashboard">
-                                    <i class="bi bi-person"></i>
-                                    Player Mode
-                                </a>
-                            }
-                            else
-                            {
-                                <a class="btn btn-sm btn-warning" asp-area="Manage" asp-page="/Index">
-                                    <i class="bi bi-gear"></i>
-                                    Manager Mode
-                                </a>
-                            }
-                        </div>
-                    }
+                    <div class="d-flex align-items-center">
+                        <partial name="_LoginPartial" />
+                        @if (SignInManager.IsSignedIn(User) && User.IsInRole("Admin"))
+                        {
+                            <div class="d-flex align-items-center ms-2">
+                                @if (Context.Request.Path.StartsWithSegments("/Manage"))
+                                {
+                                    <a class="btn btn-sm btn-outline-primary" asp-area="" asp-page="/Dashboard">
+                                        <i class="bi bi-person"></i>
+                                        Player Mode
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a class="btn btn-sm btn-warning" asp-area="Manage" asp-page="/Index">
+                                        <i class="bi bi-gear"></i>
+                                        Manager Mode
+                                    </a>
+                                }
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
         </nav>
     </header>
     <div class="container">
+        @if (SignInManager.IsSignedIn(User))
+        {
+            @await Component.InvokeAsync("SeasonBanner")
+        }
         <main role="main" class="pb-3">
             @RenderBody()
         </main>
