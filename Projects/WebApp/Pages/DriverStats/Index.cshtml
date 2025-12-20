@@ -1,0 +1,221 @@
+@page
+@model WebApp.Pages.DriverStats.IndexModel
+@{
+    ViewData["Title"] = "Driver Stats";
+}
+
+<h1><i class="bi bi-graph-up text-primary"></i> Driver Stats</h1>
+
+<div class="mb-4">
+    <div class="row">
+        <div class="col-md-6">
+            <label for="userSelect" class="form-label"><i class="bi bi-person-fill text-info"></i> Select User</label>
+            <select id="userSelect" class="form-select">
+                @foreach (var user in Model.Users)
+                {
+                    var selected = user.UserId == Model.CurrentUserId ? "selected" : "";
+                    <option value="@user.UserId" selected="@(selected == "selected" ? "selected" : null)">
+                        @user.FirstName @user.LastName @(user.UserId == Model.CurrentUserId ? "(You)" : "")
+                    </option>
+                }
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Driver Stats Chart -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-bar-chart-line-fill text-success"></i> Driver Finishing Positions by Week</h5>
+        <div id="driverStatsChart" style="height: 500px;"></div>
+    </div>
+</div>
+
+<!-- Driver Details Table -->
+<div class="card shadow-sm">
+    <div class="card-body">
+        <h5 class="card-title"><i class="bi bi-table text-primary"></i> Detailed Stats</h5>
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="driverStatsTable">
+                <thead class="table-light">
+                    <tr>
+                        <th><i class="bi bi-person"></i> Driver</th>
+                        <th><i class="bi bi-hash"></i> Car</th>
+                        <th><i class="bi bi-trophy"></i> Best Finish</th>
+                        <th><i class="bi bi-graph-down"></i> Worst Finish</th>
+                        <th><i class="bi bi-calculator"></i> Avg Finish</th>
+                        <th><i class="bi bi-calendar-check"></i> Races</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts@3.44.0/dist/apexcharts.min.js"></script>
+    <script>
+        let chart = null;
+        let allDriverStats = {};
+
+        async function loadDriverStats(userId) {
+            try {
+                const response = await fetch(`/DriverStats?handler=DriverStats&userId=${userId}`);
+                const data = await response.json();
+                
+                allDriverStats[userId] = data;
+                
+                renderChart(data);
+                renderTable(data);
+            } catch (error) {
+                console.error('Error loading driver stats:', error);
+            }
+        }
+
+        function renderChart(data) {
+            const chartElement = document.getElementById('driverStatsChart');
+            
+            if (!data.weeklyStats || data.weeklyStats.length === 0) {
+                chartElement.innerHTML = '<div class="alert alert-info"><i class="bi bi-info-circle"></i> No driver stats available for this user.</div>';
+                return;
+            }
+
+            // Prepare series data - one series per driver
+            const driverSeries = {};
+            
+            data.weeklyStats.forEach(week => {
+                week.driverFinishes.forEach(df => {
+                    if (!driverSeries[df.driverId]) {
+                        driverSeries[df.driverId] = {
+                            name: `${df.driverName} (#${df.carNumber})`,
+                            data: []
+                        };
+                    }
+                    
+                    // Add data point for this week
+                    driverSeries[df.driverId].data.push({
+                        x: week.raceName,
+                        y: df.finishPosition
+                    });
+                });
+            });
+
+            const series = Object.values(driverSeries);
+            
+            const options = {
+                series: series,
+                chart: {
+                    type: 'line',
+                    height: 500,
+                    toolbar: {
+                        show: true
+                    },
+                    zoom: {
+                        enabled: true
+                    }
+                },
+                stroke: {
+                    curve: 'smooth',
+                    width: 3
+                },
+                markers: {
+                    size: 6,
+                    hover: {
+                        size: 8
+                    }
+                },
+                xaxis: {
+                    type: 'category',
+                    title: {
+                        text: 'Race'
+                    },
+                    labels: {
+                        rotate: -45,
+                        rotateAlways: true
+                    }
+                },
+                yaxis: {
+                    reversed: true,
+                    title: {
+                        text: 'Finish Position'
+                    },
+                    min: 1,
+                    tickAmount: 10
+                },
+                title: {
+                    text: 'Driver Performance by Race',
+                    align: 'center',
+                    style: {
+                        fontSize: '18px',
+                        fontWeight: 'bold'
+                    }
+                },
+                tooltip: {
+                    y: {
+                        formatter: function(value) {
+                            return 'Position: ' + value;
+                        }
+                    }
+                },
+                legend: {
+                    position: 'bottom',
+                    horizontalAlign: 'center'
+                },
+                colors: ['#0d6efd', '#6c757d', '#198754', '#dc3545', '#ffc107', '#0dcaf0', '#d63384']
+            };
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new ApexCharts(chartElement, options);
+            chart.render();
+        }
+
+        function renderTable(data) {
+            const tbody = document.querySelector('#driverStatsTable tbody');
+            
+            if (!data.driverSummaries || data.driverSummaries.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted"><i class="bi bi-inbox"></i> No driver data available.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.driverSummaries.map(driver => `
+                <tr>
+                    <td class="fw-bold">${driver.driverName}</td>
+                    <td><span class="badge bg-secondary">#${driver.carNumber}</span></td>
+                    <td>
+                        ${driver.bestFinish === 1 
+                            ? '<i class="bi bi-trophy-fill text-warning"></i> ' + driver.bestFinish 
+                            : driver.bestFinish}
+                    </td>
+                    <td>${driver.worstFinish}</td>
+                    <td>${driver.avgFinish}</td>
+                    <td>${driver.racesCount}</td>
+                </tr>
+            `).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const userSelect = document.getElementById('userSelect');
+            const initialUserId = userSelect.value;
+            
+            loadDriverStats(initialUserId);
+            
+            userSelect.addEventListener('change', function() {
+                const selectedUserId = this.value;
+                
+                // Check if we already have this data cached
+                if (allDriverStats[selectedUserId]) {
+                    renderChart(allDriverStats[selectedUserId]);
+                    renderTable(allDriverStats[selectedUserId]);
+                } else {
+                    loadDriverStats(selectedUserId);
+                }
+            });
+        });
+    </script>
+}
