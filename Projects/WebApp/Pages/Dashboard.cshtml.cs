@@ -62,7 +62,7 @@ namespace WebApp.Pages
         {
             if (CurrentRace == null) return 0;
 
-            var currentSeason = _context.Pools.OrderByDescending(p => p.Year).FirstOrDefault();
+            var currentSeason = GetCurrentSeasonFromCookie();
             if (currentSeason == null) return 0;
 
             var seasonRaces = _context.Races
@@ -79,6 +79,39 @@ namespace WebApp.Pages
             return isFirstHalf ? (PrimaryDriver?.Id ?? 0) : (SecondHalfPrimaryDriver?.Id ?? 0);
         }
 
+        private Pool GetCurrentSeasonFromCookie()
+        {
+            // Try to get poolId from cookie
+            var poolIdCookie = Request.Cookies["poolId"];
+            Pool currentSeason = null;
+
+            if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
+            {
+                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+                if (currentSeason != null)
+                {
+                    _logger.LogInformation("Using season from poolId cookie. PoolId: {PoolId}, Year: {Year}", 
+                        currentSeason.Id, currentSeason.Year);
+                }
+            }
+
+            // Fallback to latest season if cookie not found or invalid
+            if (currentSeason == null)
+            {
+                currentSeason = _context.Pools.AsEnumerable()
+                    .OrderByDescending(s => s.CurrentYear)
+                    .FirstOrDefault();
+                
+                if (currentSeason != null)
+                {
+                    _logger.LogInformation("Fallback to latest season. PoolId: {PoolId}, Year: {Year}", 
+                        currentSeason.Id, currentSeason.Year);
+                }
+            }
+
+            return currentSeason;
+        }
+
         public async Task OnGetAsync()
         {
             try
@@ -86,9 +119,7 @@ namespace WebApp.Pages
                 UserId = _userManager.GetUserId(User);
                 _logger.LogInformation("User {UserId} accessed Dashboard page", UserId);
 
-                var currentSeason = _context.Pools.AsEnumerable()
-                    .OrderByDescending(s => s.CurrentYear)
-                    .FirstOrDefault();
+                var currentSeason = GetCurrentSeasonFromCookie();
 
                 if (currentSeason == null)
                 {
@@ -300,8 +331,8 @@ namespace WebApp.Pages
                     }
                 }
 
-                _logger.LogInformation("Dashboard loaded successfully for user {UserId}. OverallPlace: {Place}, TotalPoints: {Points}, CurrentRace: {Race}", 
-                    UserId, OverallPlace, TotalPoints, CurrentRace?.Name ?? "None");
+                _logger.LogInformation("Dashboard loaded successfully for user {UserId}. OverallPlace: {Place}, TotalPoints: {Points}, CurrentRace: {Race}, Season: {SeasonYear}", 
+                    UserId, OverallPlace, TotalPoints, CurrentRace?.Name ?? "None", currentSeason.Year);
             }
             catch (Exception ex)
             {
@@ -459,9 +490,7 @@ namespace WebApp.Pages
                     UserId, User.Identity?.Name ?? "Anonymous", halfType, driverId, ipAddress);
 
                 // Validate timing restrictions
-                var currentSeason = await _context.Pools
-                    .OrderByDescending(p => p.Year)
-                    .FirstOrDefaultAsync();
+                var currentSeason = GetCurrentSeasonFromCookie();
 
                 if (currentSeason == null)
                 {
@@ -614,9 +643,7 @@ namespace WebApp.Pages
         {
             try
             {
-                var currentSeason = await _context.Pools
-                    .OrderByDescending(p => p.Year)
-                    .FirstOrDefaultAsync();
+                var currentSeason = GetCurrentSeasonFromCookie();
 
                 if (currentSeason == null)
                 {

@@ -66,13 +66,33 @@ namespace WebApp.Pages.DriverStats
             public List<DriverSummary> DriverSummaries { get; set; } = new();
         }
 
+        private Pool? GetCurrentSeasonFromCookie()
+        {
+            // Try to get poolId from cookie
+            var poolIdCookie = Request.Cookies["poolId"];
+            Pool? currentSeason = null;
+
+            if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
+            {
+                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+            }
+
+            // Fallback to latest season if cookie not found or invalid
+            if (currentSeason == null)
+            {
+                currentSeason = _context.Pools.AsEnumerable()
+                    .OrderByDescending(s => s.CurrentYear)
+                    .FirstOrDefault();
+            }
+
+            return currentSeason;
+        }
+
         public async Task OnGetAsync()
         {
             CurrentUserId = _userManager.GetUserId(User);
 
-            var currentSeason = _context.Pools.AsEnumerable()
-                .OrderByDescending(s => s.CurrentYear)
-                .FirstOrDefault();
+            var currentSeason = GetCurrentSeasonFromCookie();
 
             if (currentSeason == null)
                 return;
@@ -112,9 +132,7 @@ namespace WebApp.Pages.DriverStats
             if (string.IsNullOrEmpty(userId))
                 return new JsonResult(new DriverStatsResponse());
 
-            var currentSeason = _context.Pools.AsEnumerable()
-                .OrderByDescending(s => s.CurrentYear)
-                .FirstOrDefault();
+            var currentSeason = GetCurrentSeasonFromCookie();
 
             if (currentSeason == null)
                 return new JsonResult(new DriverStatsResponse());

@@ -88,11 +88,31 @@ namespace WebApp.Pages.Standings
             public string? CurrentUserId { get; set; }
         }
 
+        private Pool? GetCurrentSeasonFromCookie()
+        {
+            // Try to get poolId from cookie
+            var poolIdCookie = Request.Cookies["poolId"];
+            Pool? currentSeason = null;
+
+            if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
+            {
+                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+            }
+
+            // Fallback to latest season if cookie not found or invalid
+            if (currentSeason == null)
+            {
+                currentSeason = _context.Pools.AsEnumerable<Pool>()
+                    .OrderByDescending(s => s.CurrentYear)
+                    .FirstOrDefault();
+            }
+
+            return currentSeason;
+        }
+
         public async Task OnGetAsync()
         {
-            var currentSeason = _context.Pools.AsEnumerable<Pool>()
-				.OrderByDescending(s => s.CurrentYear)
-				.FirstOrDefault();
+            var currentSeason = GetCurrentSeasonFromCookie();
 
             if (currentSeason == null)
                 return;
@@ -192,9 +212,7 @@ namespace WebApp.Pages.Standings
 
         public async Task<IActionResult> OnGetWeeklyStandingsAsync(int weekNumber)
         {
-            var currentSeason = _context.Pools.AsEnumerable<Pool>()
-                .OrderByDescending(s => s.CurrentYear)
-                .FirstOrDefault();
+            var currentSeason = GetCurrentSeasonFromCookie();
 
             if (currentSeason == null)
                 return new JsonResult(new WeeklyStandingsResponse());
@@ -280,9 +298,7 @@ namespace WebApp.Pages.Standings
 
         public async Task<IActionResult> OnGetChartDataAsync()
         {
-            var currentSeason = _context.Pools.AsEnumerable<Pool>()
-                .OrderByDescending(s => s.CurrentYear)
-                .FirstOrDefault();
+            var currentSeason = GetCurrentSeasonFromCookie();
 
             if (currentSeason == null)
                 return new JsonResult(new ChartDataResponse());
@@ -365,9 +381,7 @@ namespace WebApp.Pages.Standings
 
         public async Task<IActionResult> OnGetCumulativeProgressionAsync()
         {
-            var currentSeason = _context.Pools.AsEnumerable<Pool>()
-                .OrderByDescending(s => s.CurrentYear)
-                .FirstOrDefault();
+            var currentSeason = GetCurrentSeasonFromCookie();
 
             if (currentSeason == null)
                 return new JsonResult(new CumulativeProgressionResponse());
