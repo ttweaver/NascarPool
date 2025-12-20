@@ -5,7 +5,16 @@
 }
 <h1>Season Standings</h1>
 
-@if (Model.Standings == null || !Model.Standings.Any())
+@if (!Model.HasRaceResults)
+{
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No race results available yet for the current season. Standings will be displayed once race results are entered.
+    </div>
+    <p class="mt-3">
+        <a asp-page="/Dashboard" class="btn btn-secondary">Back to Dashboard</a>
+    </p>
+}
+else if (Model.Standings == null || !Model.Standings.Any())
 {
     <div class="alert alert-info">No standings available for the current season.</div>
 }

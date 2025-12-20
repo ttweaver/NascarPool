@@ -26,6 +26,7 @@ namespace WebApp.Pages.Standings
         public int CurrentWeekNumber { get; set; }
         public int TotalWeeks { get; set; }
         public List<WeekOption> AvailableWeeks { get; set; } = new();
+        public bool HasRaceResults { get; set; }
 
         public class StandingEntry
         {
@@ -94,6 +95,15 @@ namespace WebApp.Pages.Standings
 				.FirstOrDefault();
 
             if (currentSeason == null)
+                return;
+
+            // Check if there are any race results for the current season
+            var hasAnyRaceResults = await _context.RaceResults
+                .AnyAsync(rr => rr.Race.PoolId == currentSeason.Id);
+
+            HasRaceResults = hasAnyRaceResults;
+
+            if (!hasAnyRaceResults)
                 return;
 
             var now = DateTime.UtcNow;

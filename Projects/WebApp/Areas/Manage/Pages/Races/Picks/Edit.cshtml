@@ -6,6 +6,14 @@
 }
 <h1>Edit Picks for @Model.Race?.Name (@Model.Race?.Date.ToShortDateString())</h1>
 
+@if (TempData["SuccessMessage"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle-fill"></i> @TempData["SuccessMessage"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
 <form method="post" id="picksForm">
     <input type="hidden" name="RaceId" value="@Model.RaceId" />
     <table class="table table-bordered">
@@ -31,9 +39,15 @@
                     <div class="duplicate-warning" style="display:none; color: #dc3545; font-size: 0.875rem; margin-top: 0.25rem;">
                         <i class="bi bi-exclamation-triangle-fill"></i> Duplicate pick detected
                     </div>
+                    <div class="missing-primary-warning" style="display:none; color: #dc3545; font-size: 0.875rem; margin-top: 0.25rem;">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Primary driver required
+                    </div>
+                    <div class="missing-picks-warning" style="display:none; color: #dc3545; font-size: 0.875rem; margin-top: 0.25rem;">
+                        <i class="bi bi-exclamation-triangle-fill"></i> All three picks required
+                    </div>
                 </td>
                 <td>
-                    <select class="form-select pick-select" name="Pick1Ids" data-pick-type="1">
+                    <select class="form-select pick-select primary-pick" name="Pick1Ids" data-pick-type="1">
                         <option value="">Select</option>
                         @foreach (var driver in Model.Drivers)
                         {
@@ -74,10 +88,6 @@
         <button type="submit" class="btn btn-success me-2" id="submitBtn">Save All Picks</button>
         <button type="button" class="btn btn-secondary" onclick="history.back()">Back</button>
     </div>
-    
-    <div id="formError" class="alert alert-danger" style="display:none;" role="alert">
-        <i class="bi bi-exclamation-circle-fill"></i> Cannot save: One or more players have duplicate picks. Please correct the highlighted rows before submitting.
-    </div>
 </form>
 
 @if (!ViewData.ModelState.IsValid)
@@ -100,13 +110,37 @@
         border-color: #dc3545;
         background-color: #fff5f5;
     }
+    
+    tr.missing-primary {
+        background-color: #fff3cd !important;
+        border-left: 4px solid #ffc107;
+    }
+    
+    tr.missing-primary select.primary-pick {
+        border-color: #dc3545;
+        background-color: #fff5f5;
+    }
+    
+    tr.missing-picks {
+        background-color: #fff3cd !important;
+        border-left: 4px solid #ffc107;
+    }
+    
+    tr.missing-picks select.pick-select:not([value=""]):not(:has(option:checked[value=""])) {
+        border-color: #28a745;
+    }
+    
+    tr.missing-picks select.pick-select[value=""],
+    tr.missing-picks select.pick-select:has(option:checked[value=""]) {
+        border-color: #dc3545;
+        background-color: #fff5f5;
+    }
 </style>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const pickSelects = document.querySelectorAll('.pick-select');
         const form = document.getElementById('picksForm');
-        const formError = document.getElementById('formError');
         
         function checkForDuplicates() {
             let hasDuplicates = false;
@@ -149,29 +183,96 @@
             return hasDuplicates;
         }
         
-        // Check on page load
-        checkForDuplicates();
+        function checkForMissingPrimary() {
+            let hasMissingPrimary = false;
+            
+            // Clear all previous warnings
+            document.querySelectorAll('tr[data-row-index]').forEach(row => {
+                row.classList.remove('missing-primary');
+                row.querySelector('.missing-primary-warning').style.display = 'none';
+            });
+            
+            // Check each row for missing primary driver
+            document.querySelectorAll('tr[data-row-index]').forEach(row => {
+                const primarySelect = row.querySelector('.primary-pick');
+                const primaryValue = primarySelect.value;
+                
+                if (primaryValue === '' || primaryValue === null) {
+                    hasMissingPrimary = true;
+                    row.classList.add('missing-primary');
+                    row.querySelector('.missing-primary-warning').style.display = 'block';
+                }
+            });
+            
+            return hasMissingPrimary;
+        }
         
-        // Check whenever any pick changes
+        function checkForMissingPicks() {
+            let hasMissingPicks = false;
+            
+            // Clear all previous warnings
+            document.querySelectorAll('tr[data-row-index]').forEach(row => {
+                row.classList.remove('missing-picks');
+                row.querySelector('.missing-picks-warning').style.display = 'none';
+            });
+            
+            // Check each row for any missing picks
+            document.querySelectorAll('tr[data-row-index]').forEach(row => {
+                const selects = row.querySelectorAll('.pick-select');
+                const picks = Array.from(selects).map(s => s.value);
+                const hasEmptyPick = picks.some(v => v === '' || v === null);
+                
+                if (hasEmptyPick) {
+                    hasMissingPicks = true;
+                    row.classList.add('missing-picks');
+                    row.querySelector('.missing-picks-warning').style.display = 'block';
+                }
+            });
+            
+            return hasMissingPicks;
+        }
+        
+        function validateDuplicatesAndPrimary() {
+            const hasDuplicates = checkForDuplicates();
+            const hasMissingPrimary = checkForMissingPrimary();
+            
+            return { hasDuplicates, hasMissingPrimary };
+        }
+        
+        function validateAll() {
+            const hasDuplicates = checkForDuplicates();
+            const hasMissingPrimary = checkForMissingPrimary();
+            const hasMissingPicks = checkForMissingPicks();
+            
+            return { hasDuplicates, hasMissingPrimary, hasMissingPicks };
+        }
+        
+        // Check duplicates and primary on page load
+        validateDuplicatesAndPrimary();
+        
+        // Check duplicates and primary whenever any pick changes
         pickSelects.forEach(select => {
             select.addEventListener('change', function() {
-                checkForDuplicates();
-                formError.style.display = 'none';
+                validateDuplicatesAndPrimary();
             });
         });
         
-        // Prevent form submission if duplicates exist
+        // Prevent form submission if validation fails
         form.addEventListener('submit', function(e) {
-            const hasDuplicates = checkForDuplicates();
+            const validation = validateAll();
             
-            if (hasDuplicates) {
+            if (validation.hasDuplicates || validation.hasMissingPrimary || validation.hasMissingPicks) {
                 e.preventDefault();
-                formError.style.display = 'block';
-                formError.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
+                // Scroll to first error
+                const firstErrorRow = document.querySelector('tr.has-duplicate, tr.missing-primary, tr.missing-picks');
+                if (firstErrorRow) {
+                    firstErrorRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                
                 return false;
             }
             
-            formError.style.display = 'none';
             return true;
         });
     });

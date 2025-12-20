@@ -268,6 +268,8 @@ namespace WebApp.Areas.Manage.Pages.Races.Picks
                     "Created: {CreatedCount}, Updated: {UpdatedCount}, Errors: {ErrorCount}, Admin: {AdminEmail}, IP: {IpAddress}", 
                     RaceId, Race.Name, createdCount, updatedCount, errorCount, adminEmail, ipAddress);
 
+                TempData["SuccessMessage"] = $"Picks saved successfully!";
+
                 return RedirectToPage(new { raceId = RaceId });
             }
             catch (Exception ex)

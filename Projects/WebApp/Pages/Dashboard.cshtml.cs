@@ -44,6 +44,9 @@ namespace WebApp.Pages
         public Driver SecondHalfPrimaryDriver { get; set; }
         public Race SecondHalfFirstRace { get; set; }
 
+        public bool IsPrimaryDriverValid { get; set; }
+        public bool IsSecondHalfPrimaryDriverValid { get; set; }
+
         public class PlayerRaceResult
         {
             public int Place { get; set; }
@@ -210,6 +213,22 @@ namespace WebApp.Pages
 
                 PrimaryDriver = user?.PrimaryDriverFirstHalf;
                 SecondHalfPrimaryDriver = user?.PrimaryDriverSecondHalf;
+
+                // Validate primary drivers belong to current season
+                IsPrimaryDriverValid = PrimaryDriver == null || PrimaryDriver.PoolId == currentSeason.Id;
+                IsSecondHalfPrimaryDriverValid = SecondHalfPrimaryDriver == null || SecondHalfPrimaryDriver.PoolId == currentSeason.Id;
+
+                if (PrimaryDriver != null && !IsPrimaryDriverValid)
+                {
+                    _logger.LogWarning("Primary driver (First Half) is invalid for current season. UserId: {UserId}, DriverId: {DriverId}, DriverName: {DriverName}, DriverPoolId: {DriverPoolId}, CurrentSeasonId: {CurrentSeasonId}",
+                        UserId, PrimaryDriver.Id, PrimaryDriver.Name, PrimaryDriver.PoolId, currentSeason.Id);
+                }
+
+                if (SecondHalfPrimaryDriver != null && !IsSecondHalfPrimaryDriverValid)
+                {
+                    _logger.LogWarning("Primary driver (Second Half) is invalid for current season. UserId: {UserId}, DriverId: {DriverId}, DriverName: {DriverName}, DriverPoolId: {DriverPoolId}, CurrentSeasonId: {CurrentSeasonId}",
+                        UserId, SecondHalfPrimaryDriver.Id, SecondHalfPrimaryDriver.Name, SecondHalfPrimaryDriver.PoolId, currentSeason.Id);
+                }
 
                 FirstRace = await _context.Races
                     .Where(r => r.Pool.Id == currentSeason.Id)

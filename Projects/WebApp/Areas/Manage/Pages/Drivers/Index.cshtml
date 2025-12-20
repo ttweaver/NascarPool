@@ -1,4 +1,4 @@
-@page
+@page "{poolId?}"
 @model IndexModel
 @using System.Linq
 @{
@@ -13,7 +13,7 @@
         <select id="PoolId" name="poolId" class="form-select w-auto" onchange="this.form.submit()">
             @foreach (var pool in pools)
             {
-                <option value="@pool.Id" selected="@(pool.Id == Model.SelectedPoolId ? "selected" : null)">
+                <option value="@pool.Id" selected="@(pool.Id == Model.PoolId ? "selected" : null)">
                     @pool.Name (@pool.Year)
                 </option>
             }
@@ -44,7 +44,7 @@
                         <label for="CarNumber" class="form-label">Car Number</label>
                         <input type="text" class="form-control" id="CarNumber" name="CarNumber" required />
                     </div>
-                    <input type="hidden" name="PoolId" value="@Model.SelectedPoolId" />
+                    <input type="hidden" name="PoolId" value="@Model.PoolId" />
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -74,7 +74,7 @@
                         <label for="editCarNumber" class="form-label">Car Number</label>
                         <input type="text" class="form-control" id="editCarNumber" name="CarNumber" required />
                     </div>
-                    <input type="hidden" id="editPoolId" name="PoolId" value="@Model.SelectedPoolId" />
+                    <input type="hidden" id="editPoolId" name="PoolId" value="@Model.PoolId" />
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -168,7 +168,7 @@
             document.getElementById('editDriverId').value = driverId;
             document.getElementById('editDriverName').value = driverName;
             document.getElementById('editCarNumber').value = carNumber;
-            document.getElementById('editPoolId').value = '@Model.SelectedPoolId';
+            document.getElementById('editPoolId').value = '@Model.PoolId';
         });
 
         // Handle delete modal population

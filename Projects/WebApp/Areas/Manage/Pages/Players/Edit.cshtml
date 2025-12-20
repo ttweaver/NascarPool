@@ -5,6 +5,12 @@
 }
 <h1 class="mb-4">Edit Player</h1>
 
+<div class="mb-3">
+    <label for="poolSelect" class="form-label">Pool</label>
+    <select id="poolSelect" class="form-select" asp-items="Model.PoolOptions">
+    </select>
+</div>
+
 <form method="post" class="card card-body shadow-sm">
     <input type="hidden" asp-for="User.Id" />
 
@@ -59,3 +65,50 @@
         <a asp-page="Index" class="btn btn-secondary">Back to List</a>
     </div>
 </form>
+
+@section Scripts {
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const poolSelect = document.getElementById('poolSelect');
+            const driverSelect1 = document.querySelector('select[name="User.PrimaryDriverFirstHalfId"]');
+            const driverSelect2 = document.querySelector('select[name="User.PrimaryDriverSecondHalfId"]');
+
+            // Store all driver options with their pool IDs
+            const allDriverOptions = @Html.Raw(Model.AllDriversJson);
+
+            function updateDriverOptions(poolId) {
+                // Filter drivers by selected pool
+                const filteredDrivers = poolId 
+                    ? allDriverOptions.filter(d => d.poolId == poolId)
+                    : allDriverOptions;
+
+                // Update both driver select lists
+                [driverSelect1, driverSelect2].forEach(select => {
+                    const currentValue = select.value;
+                    
+                    // Clear existing options except the default
+                    select.innerHTML = '<option value="">-- None --</option>';
+                    
+                    // Add filtered options
+                    filteredDrivers.forEach(driver => {
+                        const option = new Option(driver.text, driver.value);
+                        select.add(option);
+                    });
+                    
+                    // Restore previous selection if still valid
+                    if (currentValue && filteredDrivers.some(d => d.value == currentValue)) {
+                        select.value = currentValue;
+                    }
+                });
+            }
+
+            // Handle pool selection change
+            poolSelect.addEventListener('change', function () {
+                updateDriverOptions(this.value);
+            });
+
+            // Initialize with current pool selection
+            updateDriverOptions(poolSelect.value);
+        });
+    </script>
+}

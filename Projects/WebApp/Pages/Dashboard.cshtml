@@ -69,10 +69,16 @@
                         <small class="text-muted d-block"><i class="bi bi-1-circle-fill text-primary"></i> First Half</small>
                         @if (Model.PrimaryDriver != null)
                         {
-                            <div class="fw-semibold text-info small">
-                                <i class="bi bi-person-fill"></i> @Model.PrimaryDriver.Name<br />
-                                <span class="text-muted"><i class="bi bi-hash"></i>@Model.PrimaryDriver.CarNumber</span>
+                            <div class="mb-2 fw-bold @(Model.IsPrimaryDriverValid ? "text-info" : "text-danger")">
+                                <i class="bi @(Model.IsPrimaryDriverValid ? "bi-person-fill" : "bi-exclamation-triangle-fill")"></i> @Model.PrimaryDriver.Name (@Model.PrimaryDriver.CarNumber)
                             </div>
+                            @if (!Model.IsPrimaryDriverValid)
+                            {
+                                <div class="alert alert-danger mb-2">
+                                    <i class="bi bi-x-circle-fill"></i> <strong>Invalid for current season</strong><br />
+                                    <small>Please select a new primary driver.</small>
+                                </div>
+                            }
                         }
                         else
                         {
@@ -83,10 +89,16 @@
                         <small class="text-muted d-block"><i class="bi bi-2-circle-fill text-success"></i> Second Half</small>
                         @if (Model.SecondHalfPrimaryDriver != null)
                         {
-                            <div class="fw-semibold text-info small">
-                                <i class="bi bi-person-fill"></i> @Model.SecondHalfPrimaryDriver.Name<br />
-                                <span class="text-muted"><i class="bi bi-hash"></i>@Model.SecondHalfPrimaryDriver.CarNumber</span>
+                            <div class="mb-2 fw-bold @(Model.IsSecondHalfPrimaryDriverValid ? "text-info" : "text-danger")">
+                                <i class="bi @(Model.IsSecondHalfPrimaryDriverValid ? "bi-person-fill" : "bi-exclamation-triangle-fill")"></i> @Model.SecondHalfPrimaryDriver.Name (@Model.SecondHalfPrimaryDriver.CarNumber)
                             </div>
+                            @if (!Model.IsSecondHalfPrimaryDriverValid)
+                            {
+                                <div class="alert alert-danger mb-2">
+                                    <i class="bi bi-x-circle-fill"></i> <strong>Invalid for current season</strong><br />
+                                    <small>Please select a new primary driver.</small>
+                                </div>
+                            }
                         }
                         else
                         {
@@ -97,7 +109,7 @@
                 
                 <!-- Primary Driver Button -->
                 <div class="mt-3">
-                    <button type="button" class="btn btn-outline-secondary btn-sm w-100" data-bs-toggle="modal" data-bs-target="#primaryDriverModal">
+                    <button type="button" class="btn @(Model.IsPrimaryDriverValid && Model.IsSecondHalfPrimaryDriverValid ? "btn-outline-secondary" : "btn-danger") btn-sm w-100" data-bs-toggle="modal" data-bs-target="#primaryDriverModal">
                         <i class="bi bi-star-fill text-warning"></i> Manage Primary Drivers
                     </button>
                 </div>
@@ -276,7 +288,7 @@
                                 <option value="">-- Select Driver --</option>
                                 @foreach (var driver in Model.AvailableDrivers)
                                 {
-                                    <option value="@driver.Id" selected="@(Model.CurrentWeekPick?.Pick1Id == driver.Id)">
+                                    <option value="@driver.Id" selected="@(Model.CurrentWeekPick?.Pick1Id == Model.GetPrimaryDriverIdForCurrentRace() || driver.Id == Model.GetPrimaryDriverIdForCurrentRace() ? "selected" : null)">
                                         @driver.Name (@driver.CarNumber)
                                     </option>
                                 }
@@ -293,7 +305,7 @@
                                 <option value="">-- Select Driver --</option>
                                 @foreach (var driver in Model.AvailableDrivers)
                                 {
-                                    <option value="@driver.Id" selected="@(Model.CurrentWeekPick?.Pick2Id == driver.Id)">
+                                    <option value="@driver.Id" selected="@(Model.CurrentWeekPick?.Pick2Id == driver.Id ? "selected": null)">
                                         @driver.Name (@driver.CarNumber)
                                     </option>
                                 }
@@ -309,7 +321,7 @@
                                 <option value="">-- Select Driver --</option>
                                 @foreach (var driver in Model.AvailableDrivers)
                                 {
-                                    <option value="@driver.Id" selected="@(Model.CurrentWeekPick?.Pick3Id == driver.Id)">
+                                    <option value="@driver.Id" selected="@(Model.CurrentWeekPick?.Pick3Id == driver.Id ? "selected": null)">
                                         @driver.Name (@driver.CarNumber)
                                     </option>
                                 }
@@ -393,7 +405,7 @@
                                 @if (Model.SecondHalfPrimaryDriver != null)
                                 {
                                     <div class="mb-2 fw-bold text-info">
-                                        <i class="bi bi-person-fill"></i> @Model.SecondHalfPrimaryDriver.Name (@Model.SecondHalfPrimaryDriver.CarNumber)
+                                        <i class="bi @(Model.IsSecondHalfPrimaryDriverValid ? "bi-person-fill" : "bi-exclamation-triangle-fill")"></i> @Model.SecondHalfPrimaryDriver.Name (@Model.SecondHalfPrimaryDriver.CarNumber)
                                     </div>
                                 }
                                 else
@@ -612,6 +624,35 @@
         </div>
     </div>
 </div>
+
+<!-- Primary Driver Validation Warnings -->
+@if (!Model.IsPrimaryDriverValid || !Model.IsSecondHalfPrimaryDriverValid)
+{
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Invalid Primary Driver</h5>
+        @if (!Model.IsPrimaryDriverValid && Model.PrimaryDriver != null)
+        {
+            <p class="mb-2">
+                <strong>First Half:</strong> Your primary driver <strong>@Model.PrimaryDriver.Name (#@Model.PrimaryDriver.CarNumber)</strong> 
+                is not valid for the current season. Please update your selection.
+            </p>
+        }
+        @if (!Model.IsSecondHalfPrimaryDriverValid && Model.SecondHalfPrimaryDriver != null)
+        {
+            <p class="mb-2">
+                <strong>Second Half:</strong> Your primary driver <strong>@Model.SecondHalfPrimaryDriver.Name (#@Model.SecondHalfPrimaryDriver.CarNumber)</strong> 
+                is not valid for the current season. Please update your selection.
+            </p>
+        }
+        <hr>
+        <p class="mb-0">
+            <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#primaryDriverModal">
+                <i class="bi bi-star-fill text-warning"></i> Update Primary Drivers Now
+            </button>
+        </p>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
 
 @section Scripts {
     <script>

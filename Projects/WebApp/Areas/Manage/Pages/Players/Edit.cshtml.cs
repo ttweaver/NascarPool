@@ -28,6 +28,12 @@ namespace WebApp.Areas.Manage.Pages.Players
         // options for the driver select lists
         public List<SelectListItem> DriverOptions { get; set; } = new();
 
+        // options for the pool select list
+        public List<SelectListItem> PoolOptions { get; set; } = new();
+
+        // JSON data for all drivers with pool IDs (for client-side filtering)
+        public string AllDriversJson { get; set; } = "[]";
+
         public async Task<IActionResult> OnGetAsync(string id)
         {
             try
@@ -52,6 +58,7 @@ namespace WebApp.Areas.Manage.Pages.Players
                     return NotFound();
                 }
 
+                await PopulatePoolOptionsAsync();
                 await PopulateDriverOptionsAsync();
                 return Page();
             }
@@ -67,6 +74,7 @@ namespace WebApp.Areas.Manage.Pages.Players
             try
             {
                 // repopulate selects if we redisplay the page
+                await PopulatePoolOptionsAsync();
                 await PopulateDriverOptionsAsync();
 
                 ModelState.Remove("User.PrimaryDriverFirstHalf");
@@ -119,19 +127,57 @@ namespace WebApp.Areas.Manage.Pages.Players
             }
         }
 
+        private async Task PopulatePoolOptionsAsync()
+        {
+            var pools = await _context.Pools
+                .OrderByDescending(p => p.Year)
+                .ToListAsync();
+
+            // Get the current pool (highest year)
+            var currentPool = pools.FirstOrDefault();
+
+            PoolOptions = pools
+                .Select(p => new SelectListItem
+                {
+                    Value = p.Id.ToString(),
+                    Text = $"{p.Name} ({p.Year})",
+                    Selected = currentPool != null && p.Id == currentPool.Id
+                })
+                .ToList();
+        }
+
         private async Task PopulateDriverOptionsAsync()
         {
             var drivers = await _context.Drivers
-                .OrderBy(d => d.Name)
+                .Include(d => d.Pool)
+                .OrderBy(d => d.Pool.Year)
+                .ThenBy(d => d.Name)
                 .ToListAsync();
 
+            // Get the current pool to filter drivers initially
+            var currentPool = await _context.Pools
+                .OrderByDescending(p => p.Year)
+                .FirstOrDefaultAsync();
+
+            // Set initial driver options for current pool
             DriverOptions = drivers
+                .Where(d => currentPool != null && d.PoolId == currentPool.Id)
                 .Select(d => new SelectListItem
                 {
                     Value = d.Id.ToString(),
                     Text = $"{d.Name} ({d.CarNumber})"
                 })
                 .ToList();
+
+            // Create JSON for all drivers (for client-side filtering)
+            var allDriversData = drivers.Select(d => new
+            {
+                value = d.Id.ToString(),
+                text = $"{d.Name} ({d.CarNumber})",
+                poolId = d.PoolId
+            }).ToList();
+
+            AllDriversJson = System.Text.Json.JsonSerializer.Serialize(allDriversData);
         }
     }
 }
