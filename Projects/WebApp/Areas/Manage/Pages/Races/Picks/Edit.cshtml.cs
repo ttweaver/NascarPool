@@ -32,6 +32,28 @@ namespace WebApp.Areas.Manage.Pages.Races.Picks
         public List<Race> Races { get; set; } = new();
         public Dictionary<string, int?> UserDefaultPick1 { get; set; } = new();
 
+        private Pool? GetCurrentSeasonFromCookie()
+        {
+            // Try to get poolId from cookie
+            var poolIdCookie = Request.Cookies["poolId"];
+            Pool? currentSeason = null;
+
+            if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
+            {
+                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+            }
+
+            // Fallback to latest season if cookie not found or invalid
+            if (currentSeason == null)
+            {
+                currentSeason = _context.Pools.AsEnumerable()
+                    .OrderByDescending(s => s.CurrentYear)
+                    .FirstOrDefault();
+            }
+
+            return currentSeason;
+        }
+
         public async Task<IActionResult> OnGetAsync()
         {
             try
@@ -45,6 +67,15 @@ namespace WebApp.Areas.Manage.Pages.Races.Picks
                     _logger.LogWarning("Race not found during bulk pick edit. RaceId: {RaceId}, Admin: {AdminEmail}", 
                         RaceId, User.Identity?.Name ?? "Anonymous");
                     return NotFound();
+                }
+
+                // Verify that the race belongs to the current season from cookie (optional validation)
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason != null && Race.PoolId != currentSeason.Id)
+                {
+                    _logger.LogWarning("Race {RaceId} does not belong to current season {PoolId}. Race PoolId: {RacePoolId}. Redirecting to race index.", 
+                        RaceId, currentSeason.Id, Race.PoolId);
+                    return RedirectToPage("/Races/Index", new { area = "Manage" });
                 }
 
                 var memberIds = Race.Pool.Members.Select(m => m.Id).ToList();
@@ -100,8 +131,8 @@ namespace WebApp.Areas.Manage.Pages.Races.Picks
                     UserDefaultPick1[user.Id] = primaryDriverId;
                 }
 
-                _logger.LogInformation("Bulk pick edit page loaded successfully. RaceId: {RaceId}, Race: {RaceName}, UserCount: {UserCount}, ExistingPickCount: {PickCount}", 
-                    RaceId, Race.Name, Users.Count, picks.Count);
+                _logger.LogInformation("Bulk pick edit page loaded successfully. RaceId: {RaceId}, Race: {RaceName}, PoolId: {PoolId}, UserCount: {UserCount}, ExistingPickCount: {PickCount}", 
+                    RaceId, Race.Name, Race.PoolId, Users.Count, picks.Count);
 
                 return Page();
             }
@@ -278,9 +309,9 @@ namespace WebApp.Areas.Manage.Pages.Races.Picks
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Bulk pick save completed successfully. RaceId: {RaceId}, Race: {RaceName}, " +
+                _logger.LogInformation("Bulk pick save completed successfully. RaceId: {RaceId}, Race: {RaceName}, PoolId: {PoolId}, " +
                     "Created: {CreatedCount}, Updated: {UpdatedCount}, Errors: {ErrorCount}, Admin: {AdminEmail}, IP: {IpAddress}", 
-                    RaceId, Race.Name, createdCount, updatedCount, errorCount, adminEmail, ipAddress);
+                    RaceId, Race.Name, Race.PoolId, createdCount, updatedCount, errorCount, adminEmail, ipAddress);
 
                 TempData["SuccessMessage"] = $"Picks saved successfully!";
 

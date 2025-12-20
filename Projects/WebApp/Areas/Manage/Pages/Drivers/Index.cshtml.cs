@@ -29,31 +29,78 @@ namespace WebApp.Areas.Manage.Pages.Drivers
         [BindProperty]
         public int DriverId { get; set; }
 
-        public async Task OnGetAsync()
+        private Pool? GetCurrentSeasonFromCookie()
         {
-			Pools = await _context.Pools
-				.OrderByDescending(p => p.Year)
-				.ToListAsync();
+            // Try to get poolId from cookie
+            var poolIdCookie = Request.Cookies["poolId"];
+            Pool? currentSeason = null;
 
-			var lastestPool = await Pools.GetLatestPoolYearAsync();
-
-            if (PoolId == null)
+            if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
             {
-                PoolId = lastestPool.Id;
+                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
             }
 
-			Drivers = await _context.Drivers
-                .Include(d => d.Pool)
-                .Where(d => d.PoolId == PoolId)
+            // Fallback to latest season if cookie not found or invalid
+            if (currentSeason == null)
+            {
+                currentSeason = _context.Pools.AsEnumerable()
+                    .OrderByDescending(s => s.CurrentYear)
+                    .FirstOrDefault();
+            }
+
+            return currentSeason;
+        }
+
+        public async Task OnGetAsync()
+        {
+            Pools = await _context.Pools
+                .OrderByDescending(p => p.Year)
                 .ToListAsync();
+
+            // Use cookie-based season selection if PoolId not explicitly provided
+            if (PoolId == null)
+            {
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason != null)
+                {
+                    PoolId = currentSeason.Id;
+                }
+                else
+                {
+                    var lastestPool = await Pools.GetLatestPoolYearAsync();
+                    PoolId = lastestPool?.Id;
+                }
+            }
+
+            if (PoolId.HasValue)
+            {
+                Drivers = await _context.Drivers
+                    .Include(d => d.Pool)
+                    .Where(d => d.PoolId == PoolId)
+                    .ToListAsync();
+            }
+            else
+            {
+                Drivers = new List<Driver>();
+            }
         }
 
         public async Task<IActionResult> OnPostCreateAsync()
         {
             Pools = await _context.Pools.OrderByDescending(p => p.Year).ToListAsync();
-            if (PoolId == 0 && Pools.Any())
+            
+            // Use cookie-based season if PoolId not set
+            if (PoolId == null || PoolId == 0)
             {
-                PoolId = Pools.First().Id;
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason != null)
+                {
+                    PoolId = currentSeason.Id;
+                }
+                else if (Pools.Any())
+                {
+                    PoolId = Pools.First().Id;
+                }
             }
 
             if (string.IsNullOrWhiteSpace(DriverName) || string.IsNullOrWhiteSpace(CarNumber))
@@ -88,9 +135,19 @@ namespace WebApp.Areas.Manage.Pages.Drivers
         {
             // Ensure pools are available for repopulating the page if we need to redisplay
             Pools = await _context.Pools.OrderByDescending(p => p.Year).ToListAsync();
-            if (PoolId == 0 && Pools.Any())
+            
+            // Use cookie-based season if PoolId not set
+            if (PoolId == null || PoolId == 0)
             {
-				PoolId = Pools.First().Id;
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason != null)
+                {
+                    PoolId = currentSeason.Id;
+                }
+                else if (Pools.Any())
+                {
+                    PoolId = Pools.First().Id;
+                }
             }
 
             // Basic validation

@@ -14,15 +14,6 @@
     <input type="hidden" asp-for="SelectedPoolId" id="hiddenPoolId" />
 
     <div class="mb-3">
-        <label for="poolSelect" class="form-label"><i class="bi bi-calendar"></i> Pool / Season</label>
-        <select id="poolSelect" name="SelectedPoolId" class="form-select" asp-items="Model.PoolOptions">
-        </select>
-        <div class="form-text">Select the pool/season to manage primary drivers</div>
-    </div>
-
-    <hr />
-
-    <div class="mb-3">
         <label asp-for="User.FirstName" class="form-label"></label>
         <input asp-for="User.FirstName" class="form-control" />
         <span asp-validation-for="User.FirstName" class="text-danger"></span>

@@ -28,6 +28,28 @@ namespace WebApp.Areas.Manage.Pages.Races
         public List<Driver> Drivers { get; set; } = new();
         public Dictionary<int, RaceResult> DriverResults { get; set; } = new();
 
+        private Pool? GetCurrentSeasonFromCookie()
+        {
+            // Try to get poolId from cookie
+            var poolIdCookie = Request.Cookies["poolId"];
+            Pool? currentSeason = null;
+
+            if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
+            {
+                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+            }
+
+            // Fallback to latest season if cookie not found or invalid
+            if (currentSeason == null)
+            {
+                currentSeason = _context.Pools.AsEnumerable()
+                    .OrderByDescending(s => s.CurrentYear)
+                    .FirstOrDefault();
+            }
+
+            return currentSeason;
+        }
+
         public async Task<IActionResult> OnGetAsync()
         {
             try
@@ -43,6 +65,15 @@ namespace WebApp.Areas.Manage.Pages.Races
                     return NotFound();
                 }
 
+                // Verify that the race belongs to the current season from cookie (optional validation)
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason != null && Race.PoolId != currentSeason.Id)
+                {
+                    _logger.LogWarning("Race {RaceId} does not belong to current season {PoolId}. Race PoolId: {RacePoolId}. Redirecting to race index.", 
+                        RaceId, currentSeason.Id, Race.PoolId);
+                    return RedirectToPage("/Races/Index", new { area = "Manage" });
+                }
+
                 Drivers = await _context.Drivers
                     .Where(d => d.Pool.Id == Race.Pool.Id)
                     .OrderBy(d => d.CarNumber)
@@ -55,8 +86,8 @@ namespace WebApp.Areas.Manage.Pages.Races
                 DriverResults = results.ToDictionary(r => r.DriverId, r => r);
 
                 _logger.LogInformation("Race results page loaded successfully. RaceId: {RaceId}, Race: {RaceName}, " +
-                    "DriverCount: {DriverCount}, ExistingResultCount: {ResultCount}", 
-                    RaceId, Race.Name, Drivers.Count, results.Count);
+                    "PoolId: {PoolId}, DriverCount: {DriverCount}, ExistingResultCount: {ResultCount}", 
+                    RaceId, Race.Name, Race.PoolId, Drivers.Count, results.Count);
 
                 return Page();
             }
@@ -83,6 +114,14 @@ namespace WebApp.Areas.Manage.Pages.Races
                     _logger.LogWarning("Race not found during results save. RaceId: {RaceId}, User: {UserId}", 
                         RaceId, adminEmail);
                     return NotFound();
+                }
+
+                // Verify that the race belongs to the current season from cookie (optional validation)
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason != null && Race.PoolId != currentSeason.Id)
+                {
+                    _logger.LogWarning("Saving results for race {RaceId} which does not belong to current season {PoolId}. Race PoolId: {RacePoolId}", 
+                        RaceId, currentSeason.Id, Race.PoolId);
                 }
 
                 Drivers = await _context.Drivers
@@ -195,9 +234,9 @@ namespace WebApp.Areas.Manage.Pages.Races
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Race results saved successfully. RaceId: {RaceId}, Race: {RaceName}, " +
+                _logger.LogInformation("Race results saved successfully. RaceId: {RaceId}, Race: {RaceName}, PoolId: {PoolId}, " +
                     "Created: {Created}, Updated: {Updated}, Skipped: {Skipped}, User: {UserId}, IP: {IpAddress}", 
-                    RaceId, Race.Name, createdCount, updatedCount, skippedCount, adminEmail, ipAddress);
+                    RaceId, Race.Name, Race.PoolId, createdCount, updatedCount, skippedCount, adminEmail, ipAddress);
 
                 // After saving results, update points for all picks related to this race
                 _logger.LogInformation("Starting pick points recalculation for race {RaceId}", RaceId);
@@ -247,12 +286,20 @@ namespace WebApp.Areas.Manage.Pages.Races
                 _logger.LogInformation("User {AdminEmail} triggering manual points recalculation for race {RaceId}, IP: {IpAddress}", 
                     adminEmail, RaceId, ipAddress);
 
-                var race = await _context.Races.FirstOrDefaultAsync(r => r.Id == RaceId);
+                var race = await _context.Races.Include(r => r.Pool).FirstOrDefaultAsync(r => r.Id == RaceId);
                 if (race == null)
                 {
                     _logger.LogWarning("Race not found during manual points calculation. RaceId: {RaceId}, User: {UserId}", 
                         RaceId, adminEmail);
                     return NotFound();
+                }
+
+                // Verify that the race belongs to the current season from cookie (optional validation)
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason != null && race.PoolId != currentSeason.Id)
+                {
+                    _logger.LogWarning("Recalculating points for race {RaceId} which does not belong to current season {PoolId}. Race PoolId: {RacePoolId}", 
+                        RaceId, currentSeason.Id, race.PoolId);
                 }
 
                 var picksBefore = await _context.Picks
@@ -282,9 +329,9 @@ namespace WebApp.Areas.Manage.Pages.Races
                 }
 
                 _logger.LogInformation("Manual points recalculation completed successfully. RaceId: {RaceId}, " +
-                    "Race: {RaceName}, TotalPicks: {TotalPicks}, PicksChanged: {ChangedPicks}, " +
+                    "Race: {RaceName}, PoolId: {PoolId}, TotalPicks: {TotalPicks}, PicksChanged: {ChangedPicks}, " +
                     "User: {UserId}, IP: {IpAddress}", 
-                    RaceId, race.Name, picksBefore.Count, changedCount, adminEmail, ipAddress);
+                    RaceId, race.Name, race.PoolId, picksBefore.Count, changedCount, adminEmail, ipAddress);
 
                 return RedirectToPage(new { raceId = RaceId });
             }

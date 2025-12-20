@@ -5,16 +5,9 @@
 @{
     ViewData["Title"] = "Races";
 }
-<h1 class="mb-4">Races</h1>
 
 <div class="d-flex align-items-center w-100 mb-3">
-    <form method="get" class="d-flex align-items-center">
-        <label asp-for="PoolId" class="form-label fs-5 fw-bold text-primary me-2 mb-0">Select Pool</label>
-        <select asp-for="PoolId" asp-items="Model.PoolSelectList" class="form-select w-auto" onchange="this.form.submit()">
-            <option value="">Select a pool...</option>
-        </select>
-    </form>
-
+    <h1 class="mb-4">Races</h1>
     <!-- Button to launch the Create modal (aligned to the right) -->
     <button type="button" class="btn btn-primary ms-auto" data-bs-toggle="modal" data-bs-target="#createRaceModal">
         Add New Race

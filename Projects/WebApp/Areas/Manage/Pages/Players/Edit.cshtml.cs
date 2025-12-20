@@ -118,6 +118,16 @@ namespace WebApp.Areas.Manage.Pages.Players
         {
             try
             {
+                // Ensure SelectedPoolId is set from cookie if not already set
+                if (SelectedPoolId == 0)
+                {
+                    var currentPool = GetCurrentSeasonFromCookie();
+                    if (currentPool != null)
+                    {
+                        SelectedPoolId = currentPool.Id;
+                    }
+                }
+
                 // repopulate selects if we redisplay the page
                 await PopulatePoolOptionsAsync();
                 await PopulateDriverOptionsAsync();
@@ -135,6 +145,14 @@ namespace WebApp.Areas.Manage.Pages.Players
                 {
                     _logger.LogWarning("User not found during update. User ID {UserId}", User.Id);
                     return NotFound();
+                }
+
+                // Validate that SelectedPoolId is valid
+                if (SelectedPoolId == 0)
+                {
+                    ModelState.AddModelError(string.Empty, "No valid pool selected.");
+                    _logger.LogWarning("No valid pool ID for user update. User ID {UserId}", User.Id);
+                    return Page();
                 }
 
                 // Capture original values for logging
@@ -164,6 +182,8 @@ namespace WebApp.Areas.Manage.Pages.Players
                         PrimaryDriverSecondHalfId = PrimaryDriverSecondHalfId
                     };
                     _context.UserPoolPrimaryDrivers.Add(userPoolDriver);
+                    _logger.LogInformation("Creating new UserPoolPrimaryDriver record. UserId: {UserId}, PoolId: {PoolId}", 
+                        User.Id, SelectedPoolId);
                 }
                 else
                 {
@@ -171,6 +191,8 @@ namespace WebApp.Areas.Manage.Pages.Players
                     userPoolDriver.PrimaryDriverFirstHalfId = PrimaryDriverFirstHalfId;
                     userPoolDriver.PrimaryDriverSecondHalfId = PrimaryDriverSecondHalfId;
                     _context.UserPoolPrimaryDrivers.Update(userPoolDriver);
+                    _logger.LogInformation("Updating existing UserPoolPrimaryDriver record. UserId: {UserId}, PoolId: {PoolId}", 
+                        User.Id, SelectedPoolId);
                 }
 
                 _context.Users.Update(existing);
@@ -198,22 +220,23 @@ namespace WebApp.Areas.Manage.Pages.Players
                 .OrderByDescending(p => p.Year)
                 .ToListAsync();
 
-            // Get the current pool
+            // Get the current pool from cookie
             var currentPool = GetCurrentSeasonFromCookie();
+
+            // Ensure SelectedPoolId is set if it's 0
+            if (SelectedPoolId == 0 && currentPool != null)
+            {
+                SelectedPoolId = currentPool.Id;
+            }
 
             PoolOptions = pools
                 .Select(p => new SelectListItem
                 {
                     Value = p.Id.ToString(),
                     Text = $"{p.Name} ({p.Year})",
-                    Selected = currentPool != null && p.Id == currentPool.Id
+                    Selected = p.Id == SelectedPoolId
                 })
                 .ToList();
-
-            if (SelectedPoolId == 0 && currentPool != null)
-            {
-                SelectedPoolId = currentPool.Id;
-            }
         }
 
         private async Task PopulateDriverOptionsAsync()
@@ -224,7 +247,7 @@ namespace WebApp.Areas.Manage.Pages.Players
                 .ThenBy(d => d.Name)
                 .ToListAsync();
 
-            // Get the selected pool or current pool
+            // Get the selected pool or current pool from cookie
             var selectedPool = SelectedPoolId > 0 
                 ? await _context.Pools.FindAsync(SelectedPoolId)
                 : GetCurrentSeasonFromCookie();

@@ -16,13 +16,13 @@ namespace WebApp.Areas.Manage.Pages.Races
     {
         private readonly ApplicationDbContext _context = context;
 
-		public IList<Race> Races { get; set; } = default!;
+        public IList<Race> Races { get; set; } = default!;
 
-		public SelectList PoolSelectList { get; set; } = default!;
+        public SelectList PoolSelectList { get; set; } = default!;
         
         [BindProperty(SupportsGet = true)]
-		public int? PoolId { get; set; }
-        public Pool LatestPool { get; set; } = default!;
+        public int? PoolId { get; set; }
+        public Pool? LatestPool { get; set; }
 
         public CreateRaceInputModel CreateInput { get; set; } = default!;
 
@@ -86,27 +86,49 @@ namespace WebApp.Areas.Manage.Pages.Races
             public string State { get; set; } = default!;
         }
 
+        private Pool? GetCurrentSeasonFromCookie()
+        {
+            // Try to get poolId from cookie
+            var poolIdCookie = Request.Cookies["poolId"];
+            Pool? currentSeason = null;
+
+            if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
+            {
+                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+            }
+
+            // Fallback to latest season if cookie not found or invalid
+            if (currentSeason == null)
+            {
+                currentSeason = _context.Pools.AsEnumerable()
+                    .OrderByDescending(s => s.CurrentYear)
+                    .FirstOrDefault();
+            }
+
+            return currentSeason;
+        }
+
         public async Task<IActionResult> OnGetAsync()
         {
             await LoadDataAsync();
             return Page();
-		}
+        }
 
         // CREATE
         public async Task<IActionResult> OnPostCreateAsync()
         {
-			TempData["ActiveModal"] = null;
+            TempData["ActiveModal"] = null;
 
-			if (!User.IsInRole("Admin"))
+            if (!User.IsInRole("Admin"))
             {
                 return Forbid();
             }
 
-			// Manually bind and validate only CreateInput
-			CreateInput = new CreateRaceInputModel();
-			await TryUpdateModelAsync(CreateInput, "CreateInput");
+            // Manually bind and validate only CreateInput
+            CreateInput = new CreateRaceInputModel();
+            await TryUpdateModelAsync(CreateInput, "CreateInput");
 
-			if (!ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
                 ActiveModal = "create";
                 await LoadDataAsync();
@@ -117,8 +139,8 @@ namespace WebApp.Areas.Manage.Pages.Races
             if (pool == null)
             {
                 ModelState.AddModelError(string.Empty, "No pool found.");
-				ActiveModal = "create";
-				await LoadDataAsync();
+                ActiveModal = "create";
+                await LoadDataAsync();
                 return Page();
             }
 
@@ -126,7 +148,7 @@ namespace WebApp.Areas.Manage.Pages.Races
             {
                 ModelState.AddModelError("CreateInput.Date", $"Race date must be in the pool's year: {pool.Year}.");
                 ActiveModal = "create";
-				await LoadDataAsync();
+                await LoadDataAsync();
                 return Page();
             }
 
@@ -147,7 +169,7 @@ namespace WebApp.Areas.Manage.Pages.Races
         // EDIT
         public async Task<IActionResult> OnPostEditAsync()
         {
-			TempData["ActiveModal"] = null;
+            TempData["ActiveModal"] = null;
 
             if (!User.IsInRole("Admin"))
             {
@@ -169,16 +191,16 @@ namespace WebApp.Areas.Manage.Pages.Races
             if (race == null)
             {
                 ModelState.AddModelError(string.Empty, "Race not found.");
-				ActiveModal = "edit";
-				await LoadDataAsync();
+                ActiveModal = "edit";
+                await LoadDataAsync();
                 return Page();
             }
 
             if (EditInput.Date.Year != race.Pool.Year)
             {
                 ModelState.AddModelError("EditInput.Date", $"Race date must be in the pool's year: {race.Pool.Year}.");
-				ActiveModal = "edit";
-				await LoadDataAsync();
+                ActiveModal = "edit";
+                await LoadDataAsync();
                 return Page();
             }
 
@@ -195,9 +217,9 @@ namespace WebApp.Areas.Manage.Pages.Races
         // DELETE
         public async Task<IActionResult> OnPostDeleteAsync()
         {
-			TempData["ActiveModal"] = null;
+            TempData["ActiveModal"] = null;
 
-			if (!User.IsInRole("Admin"))
+            if (!User.IsInRole("Admin"))
             {
                 return Forbid();
             }
@@ -218,7 +240,7 @@ namespace WebApp.Areas.Manage.Pages.Races
             {
                 ModelState.AddModelError(string.Empty, "Race not found.");
                 ActiveModal = "delete";
-				await LoadDataAsync();
+                await LoadDataAsync();
                 return Page();
             }
 
@@ -250,15 +272,41 @@ namespace WebApp.Areas.Manage.Pages.Races
                 "Id",
                 "DisplayName");
 
-			if (!PoolId.HasValue)
-			{
-				PoolId = pools.GetLatestPoolYearAsync().Result.Id;
-			}
+            // Use cookie-based season selection if PoolId not explicitly provided
+            if (!PoolId.HasValue)
+            {
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason != null)
+                {
+                    PoolId = currentSeason.Id;
+                    LatestPool = currentSeason;
+                }
+                else
+                {
+                    var latestPool = await pools.GetLatestPoolYearAsync();
+                    if (latestPool != null)
+                    {
+                        PoolId = latestPool.Id;
+                        LatestPool = latestPool;
+                    }
+                }
+            }
+            else
+            {
+                LatestPool = pools.FirstOrDefault(p => p.Id == PoolId);
+            }
 
-			Races = await _context.Races
-                .Include(r => r.Pool)
-                .Where(r => r.PoolId == PoolId)
-                .ToListAsync();
+            if (PoolId.HasValue)
+            {
+                Races = await _context.Races
+                    .Include(r => r.Pool)
+                    .Where(r => r.PoolId == PoolId)
+                    .ToListAsync();
+            }
+            else
+            {
+                Races = new List<Race>();
+            }
         }
     }
 }
