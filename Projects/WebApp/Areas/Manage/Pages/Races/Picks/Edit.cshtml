@@ -12,7 +12,7 @@
         <thead>
             <tr>
                 <th>Player</th>
-                <th>Pick 1</th>
+                <th>Primary Driver</th>
                 <th>Pick 2</th>
                 <th>Pick 3</th>
             </tr>
@@ -72,7 +72,7 @@
 
     <div class="mb-3">
         <button type="submit" class="btn btn-success me-2" id="submitBtn">Save All Picks</button>
-        <a asp-page="/Races/Index" class="btn btn-secondary">Back to Races</a>
+        <button type="button" class="btn btn-secondary" onclick="history.back()">Back</button>
     </div>
     
     <div id="formError" class="alert alert-danger" style="display:none;" role="alert">
