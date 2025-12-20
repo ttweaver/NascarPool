@@ -53,6 +53,8 @@ namespace WebApp.Pages
 
         public IEnumerable<PlayerRaceResult>? CurrentWeekPlayerResults { get; set; }
 
+        public Dictionary<int, HashSet<int>> UserPicksByRaceId { get; set; } = new();
+
         public async Task OnGetAsync()
         {
             try
@@ -125,6 +127,20 @@ namespace WebApp.Pages
                         .OrderByDescending(rr => rr.Race.Date)
                         .ThenBy(rr => rr.Place)
                         .ToListAsync();
+                }
+
+                // Load user's picks for all races with results
+                if (RacesWithResults.Any())
+                {
+                    var raceIdsWithResults = RacesWithResults.Select(r => r.Id).ToList();
+                    var userPicks = await _context.Picks
+                        .Where(p => p.UserId == UserId && raceIdsWithResults.Contains(p.RaceId))
+                        .ToListAsync();
+
+                    UserPicksByRaceId = userPicks.ToDictionary(
+                        p => p.RaceId,
+                        p => new HashSet<int> { p.Pick1Id, p.Pick2Id, p.Pick3Id }
+                    );
                 }
 
                 CurrentRace = await _context.Races

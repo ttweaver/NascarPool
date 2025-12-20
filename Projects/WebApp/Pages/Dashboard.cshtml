@@ -412,7 +412,13 @@
                             {
                                 foreach (var result in Model.AllRecentResults)
                                 {
-                                    <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
+                                    var isUserPick = Model.UserPicksByRaceId.ContainsKey(result.Race.Id) 
+                                        && Model.UserPicksByRaceId[result.Race.Id].Contains(result.Driver.Id);
+                                    <tr data-race-id="@result.Race.Id" 
+                                        data-race-name="@result.Race.Name" 
+                                        data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")"
+                                        data-is-pick="@(isUserPick ? "true" : "false")"
+                                        class="@(isUserPick ? "table-success" : "")">
                                         <td>
                                             @if (result.Place == 1)
                                             {
@@ -428,7 +434,13 @@
                                             }
                                             @result.Place
                                         </td>
-                                        <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
+                                        <td>
+                                            @if (isUserPick)
+                                            {
+                                                <i class="bi bi-hand-thumbs-up-fill text-success me-1"></i>
+                                            }
+                                            @result.Driver.Name (@result.Driver.CarNumber)
+                                        </td>
                                     </tr>
                                 }
                             }
@@ -436,7 +448,13 @@
                             {
                                 foreach (var result in Model.RecentResults)
                                 {
-                                    <tr data-race-id="@result.Race.Id" data-race-name="@result.Race.Name" data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")">
+                                    var isUserPick = Model.UserPicksByRaceId.ContainsKey(result.Race.Id) 
+                                        && Model.UserPicksByRaceId[result.Race.Id].Contains(result.Driver.Id);
+                                    <tr data-race-id="@result.Race.Id" 
+                                        data-race-name="@result.Race.Name" 
+                                        data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")"
+                                        data-is-pick="@(isUserPick ? "true" : "false")"
+                                        class="@(isUserPick ? "table-success" : "")">
                                         <td>
                                             @if (result.Place == 1)
                                             {
@@ -452,7 +470,13 @@
                                             }
                                             @result.Place
                                         </td>
-                                        <td>@result.Driver.Name (@result.Driver.CarNumber)</td>
+                                        <td>
+                                            @if (isUserPick)
+                                            {
+                                                <i class="bi bi-hand-thumbs-up-fill text-success me-1"></i>
+                                            }
+                                            @result.Driver.Name (@result.Driver.CarNumber)
+                                        </td>
                                     </tr>
                                 }
                             }

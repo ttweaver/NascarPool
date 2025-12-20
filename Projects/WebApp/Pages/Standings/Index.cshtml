@@ -32,6 +32,21 @@ else
             font-size: 0.9em;
             font-style: italic;
         }
+        .week-navigation {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .week-navigation .form-select {
+            flex: 1;
+            max-width: 300px;
+        }
+        .chart-controls {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+            text-align: center;
+        }
     </style>
 
     <div class="row">
@@ -84,6 +99,78 @@ else
             <div class="col-lg-7 col-md-12 mb-4">
                 <div class="card h-100">
                     <div class="card-header">
+                        <h5 class="mb-0">Cumulative Place Progression</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="cumulativeChartLoadingSpinner" class="text-center my-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading progression chart...</span>
+                            </div>
+                        </div>
+                        <canvas id="cumulativeProgressionChart" style="max-height: 400px; display: none;"></canvas>
+                        <div class="chart-controls" id="cumulativeChartControls" style="display: none;">
+                            <button id="toggleAllPlayers" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-people"></i> Show All Players
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+
+    @if (Model.TotalWeeks > 0)
+    {
+        <div class="row mt-4">
+            <div class="col-lg-5 col-md-12 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Weekly Standings</h5>
+                        <div class="week-navigation">
+                            <button id="prevWeek" class="btn btn-outline-primary btn-sm" disabled>
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                            <select id="weekSelector" class="form-select form-select-sm">
+                                @foreach (var week in Model.AvailableWeeks)
+                                {
+                                    <option value="@week.WeekNumber" selected="@(week.WeekNumber == Model.CurrentWeekNumber)">
+                                        Week @week.WeekNumber - @week.RaceName
+                                    </option>
+                                }
+                            </select>
+                            <button id="nextWeek" class="btn btn-outline-primary btn-sm" disabled>
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="weeklyStandingsLoading" class="text-center my-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading weekly standings...</span>
+                            </div>
+                        </div>
+                        <div id="weeklyStandingsContent" style="display: none;">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-striped mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Place</th>
+                                            <th>Player</th>
+                                            <th>Total Points</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="weeklyStandingsBody">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7 col-md-12 mb-4">
+                <div class="card h-100">
+                    <div class="card-header">
                         <h5 class="mb-0">Weekly Performance Chart</h5>
                     </div>
                     <div class="card-body">
@@ -93,13 +180,18 @@ else
                             </div>
                         </div>
                         <canvas id="performanceChart" style="max-height: 500px; display: none;"></canvas>
+                        <div class="chart-controls" id="weeklyChartControls" style="display: none;">
+                            <button id="toggleAllPlayersWeekly" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-people"></i> Show All Players
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
-        }
-    </div>
+        </div>
+    }
 
-    <p>
+    <p class="mt-4">
         <a asp-page="/Dashboard" class="btn btn-secondary">Back to Dashboard</a>
     </p>
 }
@@ -110,7 +202,207 @@ else
         @if (Model.HasWeeklyPerformance)
         {
             <text>
+            // Load Cumulative Progression Chart (All Players)
             (async function() {
+                let cumulativeChart = null;
+                let showAllPlayers = false;
+                
+                try {
+                    const response = await fetch('@Url.Page("/Standings/Index", "CumulativeProgression")');
+                    if (!response.ok) {
+                        throw new Error('Failed to load progression data');
+                    }
+                    
+                    const data = await response.json();
+                    const weeklyProgression = data.weeklyProgression;
+                    const players = data.players;
+                    const currentUserId = data.currentUserId;
+                    
+                    if (!weeklyProgression || weeklyProgression.length === 0) {
+                        document.getElementById('cumulativeChartLoadingSpinner').innerHTML = 
+                            '<div class="alert alert-info">No progression data available yet. Complete more races to see your progress!</div>';
+                        return;
+                    }
+                    
+                    // Hide spinner and show chart and controls
+                    document.getElementById('cumulativeChartLoadingSpinner').style.display = 'none';
+                    document.getElementById('cumulativeProgressionChart').style.display = 'block';
+                    document.getElementById('cumulativeChartControls').style.display = 'block';
+                    
+                    const ctx = document.getElementById('cumulativeProgressionChart').getContext('2d');
+                    
+                    // Prepare datasets for each player
+                    const datasets = players.map((player, index) => {
+                        const isCurrentUser = player.userId === currentUserId;
+                        const playerData = weeklyProgression.map(week => {
+                            return {
+                                x: week.weekNumber,
+                                y: week.playerPlaces[player.userId] || null
+                            };
+                        });
+
+                        // Generate distinct colors for each player
+                        const hue = (index * 360 / players.length) % 360;
+                        const color = isCurrentUser 
+                            ? 'rgb(255, 193, 7)' // Highlight current user in gold
+                            : `hsl(${hue}, 70%, 50%)`;
+                        
+                        return {
+                            label: `${player.firstName} ${player.lastName}`,
+                            data: playerData,
+                            borderColor: color,
+                            backgroundColor: color,
+                            borderWidth: isCurrentUser ? 4 : 2,
+                            pointRadius: isCurrentUser ? 6 : 4,
+                            pointHoverRadius: isCurrentUser ? 8 : 6,
+                            tension: 0.3,
+                            hidden: !isCurrentUser // Only show current user by default
+                        };
+                    });
+
+                    // Get week labels
+                    const weekLabels = weeklyProgression.map(w => `Week ${w.weekNumber}`);
+                    
+                    cumulativeChart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: weekLabels,
+                            datasets: datasets
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: true,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'bottom',
+                                    labels: {
+                                        usePointStyle: true,
+                                        padding: 15,
+                                        font: {
+                                            size: 11
+                                        }
+                                    },
+                                    onClick: function(e, legendItem, legend) {
+                                        const index = legendItem.datasetIndex;
+                                        const chart = legend.chart;
+                                        const meta = chart.getDatasetMeta(index);
+                                        
+                                        // Toggle visibility
+                                        meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+                                        chart.update();
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Season Performance Progression',
+                                    font: {
+                                        size: 16,
+                                        weight: 'bold'
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            const weekData = weeklyProgression[context.dataIndex];
+                                            const playerId = players[context.datasetIndex].userId;
+                                            const place = weekData.playerPlaces[playerId];
+                                            const points = weekData.playerCumulativePoints[playerId];
+                                            const suffix = place === 1 ? 'st' : place === 2 ? 'nd' : place === 3 ? 'rd' : 'th';
+                                            return [
+                                                `${context.dataset.label}`,
+                                                `Place: ${place}${suffix}`,
+                                                `Cumulative Points: ${points}`,
+                                                `Race: ${weekData.raceName}`
+                                            ];
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Race Week',
+                                        font: {
+                                            weight: 'bold'
+                                        }
+                                    },
+                                    grid: {
+                                        display: true,
+                                        drawBorder: true,
+                                    }
+                                },
+                                y: {
+                                    reverse: true,
+                                    title: {
+                                        display: true,
+                                        text: 'Cumulative Place',
+                                        font: {
+                                            weight: 'bold'
+                                        }
+                                    },
+                                    ticks: {
+                                        stepSize: 1,
+                                        callback: function(value) {
+                                            const suffix = value === 1 ? 'st' : value === 2 ? 'nd' : value === 3 ? 'rd' : 'th';
+                                            return `${value}${suffix}`;
+                                        }
+                                    },
+                                    grid: {
+                                        display: true,
+                                        drawBorder: true,
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Toggle button functionality
+                    const toggleBtn = document.getElementById('toggleAllPlayers');
+                    toggleBtn.addEventListener('click', function() {
+                        showAllPlayers = !showAllPlayers;
+                        
+                        // Update all datasets visibility
+                        cumulativeChart.data.datasets.forEach((dataset, index) => {
+                            const isCurrentUser = players[index].userId === currentUserId;
+                            const meta = cumulativeChart.getDatasetMeta(index);
+                            
+                            if (showAllPlayers) {
+                                // Show all players
+                                meta.hidden = false;
+                            } else {
+                                // Show only current user
+                                meta.hidden = !isCurrentUser;
+                            }
+                        });
+                        
+                        // Update button text and icon
+                        if (showAllPlayers) {
+                            toggleBtn.innerHTML = '<i class="bi bi-person"></i> Show Only Me';
+                        } else {
+                            toggleBtn.innerHTML = '<i class="bi bi-people"></i> Show All Players';
+                        }
+                        
+                        cumulativeChart.update();
+                    });
+                    
+                } catch (error) {
+                    console.error('Error loading progression chart:', error);
+                    document.getElementById('cumulativeChartLoadingSpinner').innerHTML = 
+                        '<div class="alert alert-danger">Failed to load progression chart. Please refresh the page.</div>';
+                }
+            })();
+
+            // Load Weekly Performance Chart (All Players)
+            (async function() {
+                let weeklyChart = null;
+                let showAllPlayersWeekly = false;
+                
                 try {
                     // Fetch chart data from server
                     const response = await fetch('@Url.Page("/Standings/Index", "ChartData")');
@@ -129,10 +421,10 @@ else
                         return;
                     }
                     
-                    // Hide spinner and show chart
+                    // Hide spinner and show chart and controls
                     document.getElementById('chartLoadingSpinner').style.display = 'none';
                     document.getElementById('performanceChart').style.display = 'block';
-                    document.getElementById('chartNote').style.display = 'block';
+                    document.getElementById('weeklyChartControls').style.display = 'block';
                     
                     // Create datasets for each player
                     const datasets = players.map((player, index) => {
@@ -159,7 +451,7 @@ else
                             pointRadius: isCurrentUser ? 6 : 4,
                             pointHoverRadius: isCurrentUser ? 8 : 6,
                             tension: 0.2,
-                            hidden: !isCurrentUser && players.length > 10 // Hide non-current users if too many players
+                            hidden: !isCurrentUser // Only show current user by default
                         };
                     });
 
@@ -168,7 +460,7 @@ else
 
                     // Create chart
                     const ctx = document.getElementById('performanceChart').getContext('2d');
-                    new Chart(ctx, {
+                    weeklyChart = new Chart(ctx, {
                         type: 'line',
                         data: {
                             labels: weekLabels,
@@ -191,6 +483,15 @@ else
                                         font: {
                                             size: 11
                                         }
+                                    },
+                                    onClick: function(e, legendItem, legend) {
+                                        const index = legendItem.datasetIndex;
+                                        const chart = legend.chart;
+                                        const meta = chart.getDatasetMeta(index);
+                                        
+                                        // Toggle visibility
+                                        meta.hidden = meta.hidden === null ? !chart.data.datasets[index].hidden : null;
+                                        chart.update();
                                     }
                                 },
                                 tooltip: {
@@ -227,12 +528,128 @@ else
                             }
                         }
                     });
+                    
+                    // Toggle button functionality for weekly chart
+                    const toggleBtnWeekly = document.getElementById('toggleAllPlayersWeekly');
+                    toggleBtnWeekly.addEventListener('click', function() {
+                        showAllPlayersWeekly = !showAllPlayersWeekly;
+                        
+                        // Update all datasets visibility
+                        weeklyChart.data.datasets.forEach((dataset, index) => {
+                            const isCurrentUser = players[index].userId === currentUserId;
+                            const meta = weeklyChart.getDatasetMeta(index);
+                            
+                            if (showAllPlayersWeekly) {
+                                // Show all players
+                                meta.hidden = false;
+                            } else {
+                                // Show only current user
+                                meta.hidden = !isCurrentUser;
+                            }
+                        });
+                        
+                        // Update button text and icon
+                        if (showAllPlayersWeekly) {
+                            toggleBtnWeekly.innerHTML = '<i class="bi bi-person"></i> Show Only Me';
+                        } else {
+                            toggleBtnWeekly.innerHTML = '<i class="bi bi-people"></i> Show All Players';
+                        }
+                        
+                        weeklyChart.update();
+                    });
+                    
                 } catch (error) {
                     console.error('Error loading chart:', error);
                     document.getElementById('chartLoadingSpinner').innerHTML = 
                         '<div class="alert alert-danger">Failed to load chart data. Please refresh the page.</div>';
                 }
             })();
+            </text>
+        }
+
+        @if (Model.TotalWeeks > 0)
+        {
+            <text>
+            // Weekly Standings Navigation
+            const weekSelector = document.getElementById('weekSelector');
+            const prevWeekBtn = document.getElementById('prevWeek');
+            const nextWeekBtn = document.getElementById('nextWeek');
+            const totalWeeks = @Model.TotalWeeks;
+            const currentUserId = '@User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value';
+            
+            let currentWeek = @Model.CurrentWeekNumber;
+
+            async function loadWeeklyStandings(weekNumber) {
+                const loadingDiv = document.getElementById('weeklyStandingsLoading');
+                const contentDiv = document.getElementById('weeklyStandingsContent');
+                const tbody = document.getElementById('weeklyStandingsBody');
+                
+                loadingDiv.style.display = 'block';
+                contentDiv.style.display = 'none';
+                
+                try {
+                    const response = await fetch(`@Url.Page("/Standings/Index", "WeeklyStandings")&weekNumber=${weekNumber}`);
+                    if (!response.ok) {
+                        throw new Error('Failed to load weekly standings');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Update table
+                    tbody.innerHTML = '';
+                    data.standings.forEach(function(entry) {
+                        const isCurrentUser = entry.userId === currentUserId;
+                        const row = document.createElement('tr');
+                        row.className = isCurrentUser ? 'current-user-row' : '';
+                        row.innerHTML = `
+                            <td>${entry.place}</td>
+                            <td>
+                                ${entry.firstName} ${entry.lastName}
+                                ${isCurrentUser ? '<span class="you-are-here-badge">&larr; You are here</span>' : ''}
+                            </td>
+                            <td>${entry.totalPoints}</td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                    
+                    // Update navigation buttons
+                    prevWeekBtn.disabled = weekNumber <= 1;
+                    nextWeekBtn.disabled = weekNumber >= totalWeeks;
+                    
+                    // Show content
+                    loadingDiv.style.display = 'none';
+                    contentDiv.style.display = 'block';
+                    
+                } catch (error) {
+                    console.error('Error loading weekly standings:', error);
+                    loadingDiv.innerHTML = '<div class="alert alert-danger m-3">Failed to load weekly standings. Please try again.</div>';
+                }
+            }
+
+            // Event listeners
+            weekSelector.addEventListener('change', function(e) {
+                currentWeek = parseInt(e.target.value);
+                loadWeeklyStandings(currentWeek);
+            });
+
+            prevWeekBtn.addEventListener('click', function() {
+                if (currentWeek > 1) {
+                    currentWeek--;
+                    weekSelector.value = currentWeek;
+                    loadWeeklyStandings(currentWeek);
+                }
+            });
+
+            nextWeekBtn.addEventListener('click', function() {
+                if (totalWeeks > currentWeek) {
+                    currentWeek++;
+                    weekSelector.value = currentWeek;
+                    loadWeeklyStandings(currentWeek);
+                }
+            });
+
+            // Load initial week
+            loadWeeklyStandings(currentWeek);
             </text>
         }
     </script>

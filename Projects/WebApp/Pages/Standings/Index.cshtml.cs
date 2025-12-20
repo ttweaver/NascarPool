@@ -24,6 +24,8 @@ namespace WebApp.Pages.Standings
         public string? CurrentUserEncouragementMessage { get; set; }
         public bool HasWeeklyPerformance { get; set; }
         public int CurrentWeekNumber { get; set; }
+        public int TotalWeeks { get; set; }
+        public List<WeekOption> AvailableWeeks { get; set; } = new();
 
         public class StandingEntry
         {
@@ -32,6 +34,12 @@ namespace WebApp.Pages.Standings
             public string LastName { get; set; } = string.Empty;
             public int TotalPoints { get; set; }
             public int Place { get; set; }
+        }
+
+        public class WeekOption
+        {
+            public int WeekNumber { get; set; }
+            public string RaceName { get; set; } = string.Empty;
         }
 
         public class WeeklyPerformanceData
@@ -54,6 +62,29 @@ namespace WebApp.Pages.Standings
             public string UserId { get; set; } = string.Empty;
             public string FirstName { get; set; } = string.Empty;
             public string LastName { get; set; } = string.Empty;
+        }
+
+        public class WeeklyStandingsResponse
+        {
+            public int WeekNumber { get; set; }
+            public string RaceName { get; set; } = string.Empty;
+            public List<StandingEntry> Standings { get; set; } = new();
+            public int TotalWeeks { get; set; }
+        }
+
+        public class CumulativeProgressionData
+        {
+            public int WeekNumber { get; set; }
+            public string RaceName { get; set; } = string.Empty;
+            public Dictionary<string, int> PlayerPlaces { get; set; } = new();
+            public Dictionary<string, int> PlayerCumulativePoints { get; set; } = new();
+        }
+
+        public class CumulativeProgressionResponse
+        {
+            public List<CumulativeProgressionData> WeeklyProgression { get; set; } = new();
+            public List<PlayerInfo> Players { get; set; } = new();
+            public string? CurrentUserId { get; set; }
         }
 
         public async Task OnGetAsync()
@@ -84,6 +115,22 @@ namespace WebApp.Pages.Standings
                 .ToListAsync();
 
             CurrentWeekNumber = racesWithPicks.Count;
+            TotalWeeks = racesWithPicks.Count;
+
+            // Build available weeks list
+            int weekNum = 1;
+            foreach (var race in seasonRaces)
+            {
+                if (racesWithPicks.Contains(race.Id))
+                {
+                    AvailableWeeks.Add(new WeekOption
+                    {
+                        WeekNumber = weekNum,
+                        RaceName = race.Name
+                    });
+                    weekNum++;
+                }
+            }
 
             var standingsQuery = await _context.Picks
                 .Where(p => seasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer)
@@ -128,6 +175,91 @@ namespace WebApp.Pages.Standings
             {
                 CurrentUserEncouragementMessage = await CalculateEncouragementMessage(currentUserId, seasonRaceIds);
             }
+        }
+
+        public async Task<IActionResult> OnGetWeeklyStandingsAsync(int weekNumber)
+        {
+            var currentSeason = _context.Pools.AsEnumerable<Pool>()
+                .OrderByDescending(s => s.CurrentYear)
+                .FirstOrDefault();
+
+            if (currentSeason == null)
+                return new JsonResult(new WeeklyStandingsResponse());
+
+            var seasonRaces = await _context.Races
+                .Where(r => r.Pool.Id == currentSeason.Id)
+                .OrderBy(r => r.Date)
+                .Select(r => new { r.Id, r.Name })
+                .ToListAsync();
+
+            if (!seasonRaces.Any())
+                return new JsonResult(new WeeklyStandingsResponse());
+
+            var seasonRaceIds = seasonRaces.Select(r => r.Id).ToList();
+
+            // Get races with picks to determine valid week numbers
+            var racesWithPicks = await _context.Picks
+                .Where(p => seasonRaceIds.Contains(p.RaceId))
+                .Select(p => p.RaceId)
+                .Distinct()
+                .ToListAsync();
+
+            var validRaces = seasonRaces.Where(r => racesWithPicks.Contains(r.Id)).ToList();
+            var totalWeeks = validRaces.Count;
+
+            // Validate week number
+            if (weekNumber < 1 || weekNumber > totalWeeks)
+                return new JsonResult(new WeeklyStandingsResponse { TotalWeeks = totalWeeks });
+
+            // Get the specific race for this week
+            var targetRace = validRaces.ElementAtOrDefault(weekNumber - 1);
+
+            if (targetRace == null)
+                return new JsonResult(new WeeklyStandingsResponse { TotalWeeks = totalWeeks });
+
+            // Get standings for ONLY this specific race (not cumulative)
+            var standingsQuery = await _context.Picks
+                .Where(p => p.RaceId == targetRace.Id && p.User.IsPlayer)
+                .Select(p => new
+                {
+                    p.UserId,
+                    Points = p.Points
+                })
+                .OrderBy(p => p.Points)
+                .ToListAsync();
+
+            // Get usernames for display
+            var userIds = standingsQuery.Select(s => s.UserId).ToList();
+            var users = await _context.Users
+                .Players()
+                .Where(u => userIds.Contains(u.Id))
+                .Select(u => new { u.Id, u.FirstName, u.LastName })
+                .ToListAsync();
+
+            var userDictionary = users.ToDictionary(u => u.Id);
+
+            int place = 1;
+            var weeklyStandings = standingsQuery
+                .Where(s => userDictionary.ContainsKey(s.UserId))
+                .Select(s => new StandingEntry
+                {
+                    UserId = s.UserId,
+                    FirstName = userDictionary[s.UserId].FirstName,
+                    LastName = userDictionary[s.UserId].LastName,
+                    TotalPoints = s.Points,
+                    Place = place++
+                })
+                .ToList();
+
+            var response = new WeeklyStandingsResponse
+            {
+                WeekNumber = weekNumber,
+                RaceName = targetRace.Name,
+                Standings = weeklyStandings,
+                TotalWeeks = totalWeeks
+            };
+
+            return new JsonResult(response);
         }
 
         public async Task<IActionResult> OnGetChartDataAsync()
@@ -212,6 +344,107 @@ namespace WebApp.Pages.Standings
             return new JsonResult(response);
         }
 
+        public async Task<IActionResult> OnGetCumulativeProgressionAsync()
+        {
+            var currentSeason = _context.Pools.AsEnumerable<Pool>()
+                .OrderByDescending(s => s.CurrentYear)
+                .FirstOrDefault();
+
+            if (currentSeason == null)
+                return new JsonResult(new CumulativeProgressionResponse());
+
+            var seasonRaces = await _context.Races
+                .Where(r => r.Pool.Id == currentSeason.Id)
+                .OrderBy(r => r.Date)
+                .Select(r => new { r.Id, r.Name })
+                .ToListAsync();
+
+            if (!seasonRaces.Any())
+                return new JsonResult(new CumulativeProgressionResponse());
+
+            var seasonRaceIds = seasonRaces.Select(r => r.Id).ToList();
+
+            // Get races with picks
+            var racesWithPicks = await _context.Picks
+                .Where(p => seasonRaceIds.Contains(p.RaceId))
+                .Select(p => p.RaceId)
+                .Distinct()
+                .ToListAsync();
+
+            var validRaces = seasonRaces.Where(r => racesWithPicks.Contains(r.Id)).ToList();
+
+            // Get all players who participated
+            var playerIds = await _context.Picks
+                .Where(p => seasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer)
+                .Select(p => p.UserId)
+                .Distinct()
+                .ToListAsync();
+
+            var players = await _context.Users
+                .Players()
+                .Where(u => playerIds.Contains(u.Id))
+                .Select(u => new PlayerInfo
+                {
+                    UserId = u.Id,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName
+                })
+                .ToListAsync();
+
+            var weeklyProgression = new List<CumulativeProgressionData>();
+            int weekNumber = 1;
+
+            // Calculate cumulative standings after each week for all players
+            foreach (var race in validRaces)
+            {
+                // Get races up to and including current race
+                var racesUpToNow = validRaces.Take(weekNumber).Select(r => r.Id).ToList();
+
+                // Calculate cumulative standings
+                var cumulativeStandings = await _context.Picks
+                    .Where(p => racesUpToNow.Contains(p.RaceId) && p.User.IsPlayer)
+                    .GroupBy(p => p.UserId)
+                    .Select(g => new
+                    {
+                        UserId = g.Key,
+                        TotalPoints = g.Sum(p => p.Points)
+                    })
+                    .OrderBy(s => s.TotalPoints)
+                    .ToListAsync();
+
+                var weekData = new CumulativeProgressionData
+                {
+                    WeekNumber = weekNumber,
+                    RaceName = race.Name,
+                    PlayerPlaces = new Dictionary<string, int>(),
+                    PlayerCumulativePoints = new Dictionary<string, int>()
+                };
+
+                // Assign places to all players
+                int place = 1;
+                foreach (var standing in cumulativeStandings)
+                {
+                    weekData.PlayerPlaces[standing.UserId] = place;
+                    weekData.PlayerCumulativePoints[standing.UserId] = standing.TotalPoints;
+                    place++;
+                }
+
+                weeklyProgression.Add(weekData);
+                weekNumber++;
+            }
+
+            var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            var response = new CumulativeProgressionResponse
+            {
+                WeeklyProgression = weeklyProgression,
+                Players = players,
+                CurrentUserId = currentUserId
+            };
+
+            return new JsonResult(response);
+        }
+
         private async Task<string?> CalculateEncouragementMessage(string userId, List<int> seasonRaceIds)
         {
             // Need at least 2 races with results to compare week-over-week
@@ -234,9 +467,17 @@ namespace WebApp.Pages.Standings
             if (currentStanding == null)
                 return null;
 
-            // Calculate standings after previous race (excluding last race)
-            var previousRaceIds = seasonRaceIds.Take(seasonRaceIds.Count - 1).ToList();
-            var previousStandingsQuery = await _context.Picks
+			// Calculate standings after previous race (excluding last race)
+			var previousRaceIds = await _context.Picks
+	                                            .Where(p => seasonRaceIds.Contains(p.RaceId))
+	                                            .Select(p => new { p.RaceId, p.Race.Date })
+	                                            .Distinct()
+	                                            .OrderByDescending(x => x.Date)
+	                                            .Skip(1)
+	                                            .Take(seasonRaceIds.Count - 1)
+	                                            .Select(x => x.RaceId)
+	                                            .ToListAsync();
+			var previousStandingsQuery = await _context.Picks
                 .Where(p => previousRaceIds.Contains(p.RaceId))
                 .GroupBy(p => p.UserId)
                 .Select(g => new
@@ -244,10 +485,10 @@ namespace WebApp.Pages.Standings
                     UserId = g.Key,
                     TotalPoints = g.Sum(p => p.Points)
                 })
-                .OrderByDescending(s => s.TotalPoints)
+                .OrderBy(s => s.TotalPoints)
                 .ToListAsync();
 
-            var previousPlace = 1;
+            var previousPlace = 0;
             var previousUserPlace = 0;
             foreach (var entry in previousStandingsQuery)
             {
