@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages;
 using WebApp.Data;
 using WebApp.Models;
 
-namespace WebApp.Areas.Manage.Pages.Players
+namespace WebApp.Areas.Manage.Pages.Users
 {
     public class CreateModel : PageModel
     {
@@ -31,9 +31,6 @@ namespace WebApp.Areas.Manage.Pages.Players
         {
             try
             {
-                ModelState.Remove("User.PrimaryDriverFirstHalf");
-                ModelState.Remove("User.PrimaryDriverSecondHalf");
-
                 User.UserName = User.Email;
                 User.NormalizedUserName = User.Email.ToUpper();
                 User.NormalizedEmail = User.Email.ToUpper();

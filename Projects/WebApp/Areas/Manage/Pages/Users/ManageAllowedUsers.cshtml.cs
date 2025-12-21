@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using WebApp.Data;
 using WebApp.Models;
 
-namespace WebApp.Areas.Manage.Pages.Players
+namespace WebApp.Areas.Manage.Pages.Users
 {
     [ValidateAntiForgeryToken]
     public class ManageAllowedUsersModel : PageModel

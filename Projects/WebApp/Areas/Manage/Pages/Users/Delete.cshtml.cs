@@ -5,7 +5,7 @@ using WebApp.Models;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace WebApp.Areas.Manage.Pages.Players
+namespace WebApp.Areas.Manage.Pages.Users
 {
     public class DeleteModel : PageModel
     {

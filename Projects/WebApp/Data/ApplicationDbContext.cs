@@ -29,34 +29,34 @@ namespace WebApp.Data
             // Example: builder.Entity<Pool>().HasMany(p => p.Members).WithMany(u => u.Pools);
 
             // Configure UserPoolPrimaryDriver relationships
-            //builder.Entity<UserPoolPrimaryDriver>()
-            //    .HasOne(uppd => uppd.User)
-            //    .WithMany(u => u.PoolPrimaryDrivers)
-            //    .HasForeignKey(uppd => uppd.UserId)
-            //    .OnDelete(DeleteBehavior.Cascade);
-            
-            //builder.Entity<UserPoolPrimaryDriver>()
-            //    .HasOne(uppd => uppd.Pool)
-            //    .WithMany(p => p.UserPrimaryDrivers)
-            //    .HasForeignKey(uppd => uppd.PoolId)
-            //    .OnDelete(DeleteBehavior.Cascade);
-            
-            //builder.Entity<UserPoolPrimaryDriver>()
-            //    .HasOne(uppd => uppd.PrimaryDriverFirstHalf)
-            //    .WithMany()
-            //    .HasForeignKey(uppd => uppd.PrimaryDriverFirstHalfId)
-            //    .OnDelete(DeleteBehavior.Restrict);
-            
-            //builder.Entity<UserPoolPrimaryDriver>()
-            //    .HasOne(uppd => uppd.PrimaryDriverSecondHalf)
-            //    .WithMany()
-            //    .HasForeignKey(uppd => uppd.PrimaryDriverSecondHalfId)
-            //    .OnDelete(DeleteBehavior.Restrict);
-            
-            //// Add unique constraint to ensure one record per user per pool
-            //builder.Entity<UserPoolPrimaryDriver>()
-            //    .HasIndex(uppd => new { uppd.UserId, uppd.PoolId })
-            //    .IsUnique();
+            builder.Entity<UserPoolPrimaryDriver>()
+                .HasOne(uppd => uppd.User)
+                .WithMany(u => u.PoolPrimaryDrivers)
+                .HasForeignKey(uppd => uppd.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<UserPoolPrimaryDriver>()
+                .HasOne(uppd => uppd.Pool)
+                .WithMany(p => p.UserPrimaryDrivers)
+                .HasForeignKey(uppd => uppd.PoolId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<UserPoolPrimaryDriver>()
+                .HasOne(uppd => uppd.PrimaryDriverFirstHalf)
+                .WithMany()
+                .HasForeignKey(uppd => uppd.PrimaryDriverFirstHalfId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<UserPoolPrimaryDriver>()
+                .HasOne(uppd => uppd.PrimaryDriverSecondHalf)
+                .WithMany()
+                .HasForeignKey(uppd => uppd.PrimaryDriverSecondHalfId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Add unique constraint to ensure one record per user per pool
+            builder.Entity<UserPoolPrimaryDriver>()
+                .HasIndex(uppd => new { uppd.UserId, uppd.PoolId })
+                .IsUnique();
         }
     }
 }

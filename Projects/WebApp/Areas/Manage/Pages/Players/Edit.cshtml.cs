@@ -140,13 +140,6 @@ namespace WebApp.Areas.Manage.Pages.Players
                     return Page();
                 }
 
-                var existing = await _context.Users.FindAsync(User.Id);
-                if (existing == null)
-                {
-                    _logger.LogWarning("User not found during update. User ID {UserId}", User.Id);
-                    return NotFound();
-                }
-
                 // Validate that SelectedPoolId is valid
                 if (SelectedPoolId == 0)
                 {
@@ -154,18 +147,6 @@ namespace WebApp.Areas.Manage.Pages.Players
                     _logger.LogWarning("No valid pool ID for user update. User ID {UserId}", User.Id);
                     return Page();
                 }
-
-                // Capture original values for logging
-                var originalEmail = existing.Email;
-                var originalFirstName = existing.FirstName;
-                var originalLastName = existing.LastName;
-
-                // update only editable fields
-                existing.UserName = User.UserName;
-                existing.FirstName = User.FirstName;
-                existing.LastName = User.LastName;
-                existing.IsPlayer = User.IsPlayer;
-                existing.Email = User.Email;
 
                 // Update or create UserPoolPrimaryDriver record for the selected pool
                 var userPoolDriver = await _context.UserPoolPrimaryDrivers
@@ -195,14 +176,11 @@ namespace WebApp.Areas.Manage.Pages.Players
                         User.Id, SelectedPoolId);
                 }
 
-                _context.Users.Update(existing);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User updated successfully. UserId: {UserId}, Email: {OldEmail} -> {NewEmail}, " +
-                    "Name: {OldFirstName} {OldLastName} -> {NewFirstName} {NewLastName}, " +
+                _logger.LogInformation("User updated successfully. UserId: {UserId}, " +
                     "Pool: {PoolId}, PrimaryDriver1st: {PrimaryDriver1st}, PrimaryDriver2nd: {PrimaryDriver2nd}, UpdatedBy: {UpdatedBy}",
-                    User.Id, originalEmail, existing.Email, originalFirstName, originalLastName, 
-                    existing.FirstName, existing.LastName, SelectedPoolId, PrimaryDriverFirstHalfId, PrimaryDriverSecondHalfId,
+                    User.Id, SelectedPoolId, PrimaryDriverFirstHalfId, PrimaryDriverSecondHalfId,
                     User?.UserName ?? "Anonymous");
 
                 return RedirectToPage("Index");

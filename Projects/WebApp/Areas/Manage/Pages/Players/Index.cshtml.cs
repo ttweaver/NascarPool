@@ -24,7 +24,6 @@ namespace WebApp.Areas.Manage.Pages.Players
             public string Id { get; set; } = string.Empty;
             public string FirstName { get; set; } = string.Empty;
             public string LastName { get; set; } = string.Empty;
-            public string Email { get; set; } = string.Empty;
             public Driver? PrimaryDriverFirstHalf { get; set; }
             public Driver? PrimaryDriverSecondHalf { get; set; }
         }
@@ -95,7 +94,6 @@ namespace WebApp.Areas.Manage.Pages.Players
                         Id = player.Id,
                         FirstName = player.FirstName,
                         LastName = player.LastName,
-                        Email = player.Email ?? string.Empty,
                         PrimaryDriverFirstHalf = poolDriver?.PrimaryDriverFirstHalf,
                         PrimaryDriverSecondHalf = poolDriver?.PrimaryDriverSecondHalf
                     };
