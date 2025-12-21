@@ -153,8 +153,8 @@ namespace WebApp.Areas.Identity.Pages.Account
 
                     // Check AllowedUsers table for a matching record
                     var allowed = await _context.Set<AllowedUsers>().FirstOrDefaultAsync(u =>
-                        u.FirstName == Input.FirstName &&
-                        u.LastName == Input.LastName &&
+                        u.FirstName.ToLower() == Input.FirstName.ToLower() &&
+                        u.LastName.ToLower() == Input.LastName.ToLower() &&
                         u.Email.ToLower() == Input.Email.ToLower()
                     );
 
