@@ -22,8 +22,13 @@ namespace WebApp.Areas.Manage.Pages.Races
 
         public class UserResult
         {
+            public string UserId { get; set; } = string.Empty;
             public string UserName { get; set; } = string.Empty;
+            public string FirstName { get; set; } = string.Empty;
+            public string LastName { get; set; } = string.Empty;
             public int Points { get; set; }
+            public int Place { get; set; }
+            public bool IsTied { get; set; }
         }
 
         private Pool? GetCurrentSeasonFromCookie()
@@ -34,13 +39,13 @@ namespace WebApp.Areas.Manage.Pages.Races
 
             if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
             {
-                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+                currentSeason = _context.Pools.Include(p => p.Members).FirstOrDefault(p => p.Id == cookiePoolId);
             }
 
             // Fallback to latest season if cookie not found or invalid
             if (currentSeason == null)
             {
-                currentSeason = _context.Pools.AsEnumerable()
+                currentSeason = _context.Pools.Include(p => p.Members).AsEnumerable()
                     .OrderByDescending(s => s.CurrentYear)
                     .FirstOrDefault();
             }
@@ -50,32 +55,56 @@ namespace WebApp.Areas.Manage.Pages.Races
 
         public async Task<IActionResult> OnGetAsync()
         {
-            Race = await _context.Races.Include(r => r.Pool).FirstOrDefaultAsync(r => r.Id == RaceId);
+            Race = await _context.Races.Include(r => r.Pool).ThenInclude(p => p.Members).FirstOrDefaultAsync(r => r.Id == RaceId);
             if (Race == null) return NotFound();
 
-            // Verify that the race belongs to the current season from cookie (optional validation)
-            var currentSeason = GetCurrentSeasonFromCookie();
-            if (currentSeason != null && Race.PoolId != currentSeason.Id)
-            {
-                // Log or handle the case where viewing results for a race from a different season
-                // For now, we'll allow it but you could add validation here
-            }
+            // Get pool member IDs for the pool this race belongs to
+            var poolMemberIds = Race.Pool.Members
+                .Select(m => m.Id)
+                .ToList();
 
-            // Get all picks for this race, including user
+            // Get all picks for this race from pool members only
             var picks = await _context.Picks
                 .Include(p => p.User)
-                .Where(p => p.RaceId == RaceId)
+                .Where(p => p.RaceId == RaceId && p.User.IsPlayer && poolMemberIds.Contains(p.UserId))
+                .OrderBy(p => p.Points) // Lower points = better rank
                 .ToListAsync();
 
-            // Order by least points (lowest is best)
-            RankedResults = picks
-                .OrderBy(p => p.Points)
-                .Select(p => new UserResult
+            // Calculate places with tie handling
+            var rankedResults = new List<UserResult>();
+            int currentPlace = 1;
+            int? previousPoints = null;
+            int playersAtCurrentPlace = 0;
+
+            foreach (var pick in picks)
+            {
+                // If points changed from previous entry, advance place
+                if (previousPoints.HasValue && pick.Points != previousPoints.Value)
                 {
-                    UserName = p.User.UserName,
-                    Points = p.Points
-                })
-                .ToList();
+                    currentPlace += playersAtCurrentPlace;
+                    playersAtCurrentPlace = 0;
+                }
+
+                playersAtCurrentPlace++;
+
+                // Check if this player is tied with others at this place
+                bool isTied = picks.Count(p => p.Points == pick.Points) > 1;
+
+                rankedResults.Add(new UserResult
+                {
+                    UserId = pick.UserId,
+                    UserName = pick.User.UserName ?? string.Empty,
+                    FirstName = pick.User.FirstName,
+                    LastName = pick.User.LastName,
+                    Points = pick.Points,
+                    Place = currentPlace,
+                    IsTied = isTied
+                });
+
+                previousPoints = pick.Points;
+            }
+
+            RankedResults = rankedResults;
 
             return Page();
         }
