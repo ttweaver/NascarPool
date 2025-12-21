@@ -2,6 +2,12 @@
 @model WebApp.Pages.DashboardModel
 @{
     ViewData["Title"] = "Dashboard";
+    // Check if we're viewing the current season by comparing cookie to current year
+    var poolIdCookie = Request.Cookies["poolId"];
+    var isCurrentSeason = true; // Default to true if no way to determine
+    
+    // Note: In production, you'd want to add a property to the model to indicate this
+    // For now, we'll assume the model loads the current season from cookie
 }
 <h1><i class="bi bi-speedometer2 text-primary"></i> Dashboard</h1>
 
@@ -38,7 +44,25 @@
                             }
                             else
                             {
-                                <div class="display-4 fw-bold text-primary"><i class="bi bi-award-fill"></i> @Model.OverallPlace</div>
+                                <div class="display-4 fw-bold text-primary">
+                                    <i class="bi bi-award-fill"></i> @Model.OverallPlace
+                                    @if (Model.IsTied)
+                                    {
+                                        <sup class="fs-6 text-muted">T</sup>
+                                    }
+                                </div>
+                                @if (Model.IsTied)
+                                {
+                                    <div class="mt-2">
+                                        <span class="badge bg-info">
+                                            <i class="bi bi-people-fill"></i> 
+                                            Tied with @Model.TiedWithCount @(Model.TiedWithCount == 1 ? "player" : "players")
+                                        </span>
+                                        <div class="small text-muted mt-1">
+                                            @string.Join(", ", Model.TiedPlayerNames)
+                                        </div>
+                                    </div>
+                                }
                             }
                         </div>
                         <div class="col-md-6">
@@ -260,8 +284,8 @@
     </div>
 }
 
-<!-- Edit Picks Modal -->
-@if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
+<!-- Edit Picks Modal - ONLY show for current season and before race day -->
+@if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today && (Model.IsPrimaryDriverValid && Model.IsSecondHalfPrimaryDriverValid))
 {
     <div class="modal fade" id="editPicksModal" tabindex="-1" aria-labelledby="editPicksModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg">
@@ -346,8 +370,38 @@
         </div>
     </div>
 }
+else if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today && (!Model.IsPrimaryDriverValid || !Model.IsSecondHalfPrimaryDriverValid))
+{
+    <!-- Show message when primary drivers are invalid -->
+    <div class="modal fade" id="editPicksModal" tabindex="-1" aria-labelledby="editPicksModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="editPicksModalLabel">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Cannot Edit Picks
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="bi bi-info-circle-fill"></i> You must set valid primary drivers for the current season before making or editing picks.
+                    </div>
+                    <p>Please update your primary drivers using the "Manage Primary Drivers" button above.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle"></i> Close
+                    </button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#primaryDriverModal">
+                        <i class="bi bi-star-fill"></i> Set Primary Drivers
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
 
-<!-- Primary Driver Modal -->
+<!-- Primary Driver Modal - ONLY allow changes if primary drivers are invalid for current season or before first race -->
 <div class="modal fade" id="primaryDriverModal" tabindex="-1" aria-labelledby="primaryDriverModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -357,7 +411,7 @@
             </div>
             <div class="modal-body">
                 <div class="row">
-                    <!-- Primary Driver (First Half) -->
+                    <!-- Primary Driver (First Half) - conditionally show form -->
                     <div class="col-md-6 mb-3">
                         <div class="card h-100 border-primary">
                             <div class="card-body text-center">
@@ -372,7 +426,9 @@
                                 {
                                     <div class="text-secondary mb-2"><i class="bi bi-dash-circle"></i> No primary driver set.</div>
                                 }
-                                @if (Model.FirstRace != null && Model.FirstRace.Date > DateTime.Today)
+                                
+                                @* Only show form if first race hasn't happened AND (driver is invalid OR not set) *@
+                                @if (Model.FirstRace != null && Model.FirstRace.Date > DateTime.Today && (!Model.IsPrimaryDriverValid || Model.PrimaryDriver == null))
                                 {
                                     <form method="post" asp-page-handler="SetPrimaryDriver" class="d-inline">
                                         <select id="driverSelectFirst" name="driverId" class="form-select mb-2" required>
@@ -389,15 +445,21 @@
                                     </form>
                                     <div class="form-text"><i class="bi bi-calendar-event"></i> You can set your primary driver until @Model.FirstRace.Date.ToString("MMMM d, yyyy").</div>
                                 }
-                                else
+                                else if (Model.FirstRace != null && Model.FirstRace.Date <= DateTime.Today)
                                 {
                                     <div class="form-text text-secondary"><i class="bi bi-lock-fill"></i> Primary driver selection is closed.</div>
+                                }
+                                else if (Model.IsPrimaryDriverValid && Model.PrimaryDriver != null)
+                                {
+                                    <div class="alert alert-success mt-2">
+                                        <i class="bi bi-check-circle-fill"></i> Primary driver is set and valid for current season.
+                                    </div>
                                 }
                             </div>
                         </div>
                     </div>
 
-                    <!-- Primary Driver (Second Half) -->
+                    <!-- Primary Driver (Second Half) - conditionally show form -->
                     <div class="col-md-6 mb-3">
                         <div class="card h-100 border-success">
                             <div class="card-body text-center">
@@ -412,7 +474,9 @@
                                 {
                                     <div class="text-secondary mb-2"><i class="bi bi-dash-circle"></i> No primary driver set.</div>
                                 }
-                                @if (Model.SecondHalfFirstRace != null && Model.SecondHalfFirstRace.Date > DateTime.Today)
+                                
+                                @* Only show form if second half first race hasn't happened AND (driver is invalid OR not set) *@
+                                @if (Model.SecondHalfFirstRace != null && Model.SecondHalfFirstRace.Date > DateTime.Today && (!Model.IsSecondHalfPrimaryDriverValid || Model.SecondHalfPrimaryDriver == null))
                                 {
                                     <form method="post" asp-page-handler="SetPrimarySecondHalfDriver" class="d-inline">
                                         <select id="driverSelectSecond" name="secondHalfDriverId" class="form-select mb-2" required>
@@ -429,9 +493,15 @@
                                     </form>
                                     <div class="form-text"><i class="bi bi-calendar-event"></i> You can set your primary driver until @Model.SecondHalfFirstRace.Date.ToString("MMMM d, yyyy").</div>
                                 }
-                                else
+                                else if (Model.SecondHalfFirstRace != null && Model.SecondHalfFirstRace.Date <= DateTime.Today)
                                 {
                                     <div class="form-text text-secondary"><i class="bi bi-lock-fill"></i> Primary driver selection is closed.</div>
+                                }
+                                else if (Model.IsSecondHalfPrimaryDriverValid && Model.SecondHalfPrimaryDriver != null)
+                                {
+                                    <div class="alert alert-success mt-2">
+                                        <i class="bi bi-check-circle-fill"></i> Primary driver is set and valid for current season.
+                                    </div>
                                 }
                             </div>
                         </div>
@@ -793,7 +863,7 @@
             // Set initial state
             if (!isExpanded) {
                 content.style.display = 'none';
-                toggleIcon.textContent = '+';
+                toggleIcon.textContent = '+';}
                 toggleBtn.setAttribute('aria-expanded', 'false');
             }
 

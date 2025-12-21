@@ -47,6 +47,11 @@ namespace WebApp.Pages
         public bool IsPrimaryDriverValid { get; set; }
         public bool IsSecondHalfPrimaryDriverValid { get; set; }
 
+        // Tie information
+        public bool IsTied { get; set; }
+        public int TiedWithCount { get; set; }
+        public List<string> TiedPlayerNames { get; set; } = new();
+
         public class PlayerRaceResult
         {
             public int Place { get; set; }
@@ -87,7 +92,7 @@ namespace WebApp.Pages
 
             if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
             {
-                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+                currentSeason = _context.Pools.Include(p => p.Members).FirstOrDefault(p => p.Id == cookiePoolId);
                 if (currentSeason != null)
                 {
                     _logger.LogInformation("Using season from poolId cookie. PoolId: {PoolId}, Year: {Year}", 
@@ -98,7 +103,7 @@ namespace WebApp.Pages
             // Fallback to latest season if cookie not found or invalid
             if (currentSeason == null)
             {
-                currentSeason = _context.Pools.AsEnumerable()
+                currentSeason = _context.Pools.Include(p => p.Members).AsEnumerable()
                     .OrderByDescending(s => s.CurrentYear)
                     .FirstOrDefault();
                 
@@ -129,6 +134,11 @@ namespace WebApp.Pages
                     return;
                 }
 
+                // Get pool member IDs
+                var poolMemberIds = currentSeason.Members
+                    .Select(m => m.Id)
+                    .ToList();
+
                 // Only include races that have already occurred for standings calculations
                 var completedSeasonRaceIds = await _context.Races
                     .Where(r => r.Pool.Id == currentSeason.Id && r.Date <= DateTime.Today)
@@ -140,17 +150,92 @@ namespace WebApp.Pages
                     .Where(r => r.Pool.Id == currentSeason.Id)
                     .CountAsync();
 
-                // Calculate standings only from completed races
-                var standings = await _context.Picks
-                    .Where(p => completedSeasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer)
+                // Calculate standings only from completed races and only for pool members
+                var standingsData = await _context.Picks
+                    .Where(p => completedSeasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer && poolMemberIds.Contains(p.UserId))
                     .GroupBy(p => p.UserId)
-                    .Select(g => new { UserId = g.Key, TotalPoints = g.Sum(p => p.Points) })
-                    .OrderByDescending(s => s.TotalPoints)
+                    .Select(g => new { UserId = g.Key, TotalPoints = g.Sum(p => p.Points), User = g.First().User })
+                    .OrderBy(s => s.TotalPoints) // Lower points = better rank
                     .ToListAsync();
 
-                HasResults = false;
-                OverallPlace = standings.FindIndex(s => s.UserId == UserId) + 1;
-                TotalPoints = standings.FirstOrDefault(s => s.UserId == UserId)?.TotalPoints ?? 0;
+                var standings = new List<(string UserId, string UserName, int TotalPoints, int Rank)>();
+                int currentRank = 1;
+                int? previousPoints = null;
+                int playersAtCurrentRank = 0;
+
+                foreach (var standing in standingsData)
+                {
+                    if (previousPoints.HasValue && standing.TotalPoints != previousPoints.Value)
+                    {
+                        // Points changed, so advance rank by number of players at previous rank
+                        currentRank += playersAtCurrentRank;
+                        playersAtCurrentRank = 0;
+                    }
+
+                    playersAtCurrentRank++;
+                    var userName = $"{standing.User.FirstName} {standing.User.LastName}";
+                    standings.Add((standing.UserId, userName, standing.TotalPoints, currentRank));
+                    previousPoints = standing.TotalPoints;
+                }
+
+                HasResults = standings.Any();
+                var userStanding = standings.FirstOrDefault(s => s.UserId == UserId);
+                OverallPlace = userStanding.Rank;
+                TotalPoints = userStanding.TotalPoints;
+
+                // Calculate tie information
+                var playersAtSameRank = standings.Where(s => s.Rank == OverallPlace && s.TotalPoints == TotalPoints).ToList();
+                if (playersAtSameRank.Count > 1)
+                {
+                    IsTied = true;
+                    TiedWithCount = playersAtSameRank.Count - 1; // Exclude current user
+                    TiedPlayerNames = playersAtSameRank
+                        .Where(s => s.UserId != UserId)
+                        .Select(s => s.UserName)
+                        .ToList();
+                    
+                    _logger.LogInformation("User {UserId} is tied with {TiedCount} other player(s) at rank {Rank} with {Points} points", 
+                        UserId, TiedWithCount, OverallPlace, TotalPoints);
+                }
+
+                // Calculate current week player results (only for pool members)
+                if (CurrentRace != null && CurrentRace.Date <= DateTime.Today)
+                {
+                    var currentWeekPicks = await _context.Picks
+                        .Where(p => p.RaceId == CurrentRace.Id && p.User.IsPlayer && poolMemberIds.Contains(p.UserId))
+                        .Include(p => p.User)
+                        .OrderBy(p => p.Points) // Lower points = better rank
+                        .ToListAsync();
+
+                    if (currentWeekPicks.Any())
+                    {
+                        var weekResults = new List<PlayerRaceResult>();
+                        int place = 1;
+                        int? prevPoints = null;
+                        int playersAtPlace = 0;
+
+                        foreach (var pick in currentWeekPicks)
+                        {
+                            if (prevPoints.HasValue && pick.Points != prevPoints.Value)
+                            {
+                                place += playersAtPlace;
+                                playersAtPlace = 0;
+                            }
+
+                            playersAtPlace++;
+                            weekResults.Add(new PlayerRaceResult
+                            {
+                                Place = place,
+                                PlayerName = $"{pick.User.FirstName} {pick.User.LastName}",
+                                Points = pick.Points
+                            });
+
+                            prevPoints = pick.Points;
+                        }
+
+                        CurrentWeekPlayerResults = weekResults;
+                    }
+                }
 
                 DateTime latestResultsRaceDate = DateTime.Now;
                 if (_context.RaceResults.Any())
@@ -295,9 +380,9 @@ namespace WebApp.Pages
                         .Select(rr => rr.DriverId)
                         .ToListAsync();
 
-                    // Only include picks from completed races for participant determination
+                    // Only include picks from completed races for participant determination (pool members only)
                     var participantUserIds = await _context.Picks
-                        .Where(p => completedSeasonRaceIds.Contains(p.RaceId))
+                        .Where(p => completedSeasonRaceIds.Contains(p.RaceId) && poolMemberIds.Contains(p.UserId))
                         .Select(p => p.UserId)
                         .Distinct()
                         .ToListAsync();
@@ -326,8 +411,8 @@ namespace WebApp.Pages
                     }
                 }
 
-                _logger.LogInformation("Dashboard loaded successfully for user {UserId}. OverallPlace: {Place}, TotalPoints: {Points}, CurrentRace: {Race}, Season: {SeasonYear}", 
-                    UserId, OverallPlace, TotalPoints, CurrentRace?.Name ?? "None", currentSeason.Year);
+                _logger.LogInformation("Dashboard loaded successfully for user {UserId}. OverallPlace: {Place}, TotalPoints: {Points}, IsTied: {IsTied}, CurrentRace: {Race}, Season: {SeasonYear}, PoolMembers: {MemberCount}", 
+                    UserId, OverallPlace, TotalPoints, IsTied, CurrentRace?.Name ?? "None", currentSeason.Year, poolMemberIds.Count);
             }
             catch (Exception ex)
             {
@@ -353,6 +438,17 @@ namespace WebApp.Pages
                     _logger.LogWarning("Race not found during pick save. RaceId: {RaceId}, UserId: {UserId}", 
                         RaceId, userId);
                     TempData["Error"] = "Race not found.";
+                    return RedirectToPage();
+                }
+
+                // Validate race belongs to current season
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason == null || race.PoolId != currentSeason.Id)
+                {
+                    _logger.LogWarning("User {UserId} attempted to save picks for race {RaceId} which does not belong to current season. " +
+                        "Race PoolId: {RacePoolId}, Current Season: {CurrentSeasonId}, IP: {IpAddress}", 
+                        userId, RaceId, race.PoolId, currentSeason?.Id, ipAddress);
+                    TempData["Error"] = "You can only save picks for races in the current season.";
                     return RedirectToPage();
                 }
 
@@ -391,11 +487,22 @@ namespace WebApp.Pages
                     return RedirectToPage();
                 }
 
+                // Validate all drivers belong to current season
+                var drivers = await _context.Drivers.Where(d => 
+                    d.Id == Pick1Id || d.Id == Pick2Id || d.Id == Pick3Id).ToListAsync();
+                
+                if (drivers.Any(d => d.PoolId != currentSeason.Id))
+                {
+                    _logger.LogWarning("Pick validation failed - drivers not from current season. UserId: {UserId}, RaceId: {RaceId}, " +
+                        "Pick1: {Pick1}, Pick2: {Pick2}, Pick3: {Pick3}, CurrentSeasonId: {SeasonId}, IP: {IpAddress}", 
+                        userId, RaceId, Pick1Id, Pick2Id, Pick3Id, currentSeason.Id, ipAddress);
+                    TempData["Error"] = "All selected drivers must be from the current season.";
+                    return RedirectToPage();
+                }
+
                 var pick = await _context.Picks.FirstOrDefaultAsync(p => p.RaceId == RaceId && p.UserId == userId);
 
                 // Get driver names for logging
-                var drivers = await _context.Drivers.Where(d => 
-                    d.Id == Pick1Id || d.Id == Pick2Id || d.Id == Pick3Id).ToListAsync();
                 var pick1Name = drivers.FirstOrDefault(d => d.Id == Pick1Id)?.Name ?? $"ID:{Pick1Id}";
                 var pick2Name = drivers.FirstOrDefault(d => d.Id == Pick2Id)?.Name ?? $"ID:{Pick2Id}";
                 var pick3Name = drivers.FirstOrDefault(d => d.Id == Pick3Id)?.Name ?? $"ID:{Pick3Id}";
@@ -481,15 +588,28 @@ namespace WebApp.Pages
             var currentSeason = GetCurrentSeasonFromCookie();
             if (currentSeason == null)
             {
+                _logger.LogWarning("No current season found for user {UserId} attempting to set primary driver", UserId);
                 ModelState.AddModelError(string.Empty, "No active season found.");
                 await OnGetAsync();
                 return Page();
             }
             
             var selectedDriver = await _context.Drivers.FirstOrDefaultAsync(d => d.Id == driverId);
-            if (selectedDriver == null || selectedDriver.PoolId != currentSeason.Id)
+            if (selectedDriver == null)
             {
-                ModelState.AddModelError(string.Empty, "Selected driver not found in current season.");
+                _logger.LogWarning("Driver not found. DriverId: {DriverId}, UserId: {UserId}", driverId, UserId);
+                ModelState.AddModelError(string.Empty, "Selected driver not found.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            // Validate driver belongs to current season
+            if (selectedDriver.PoolId != currentSeason.Id)
+            {
+                _logger.LogWarning("User {UserId} attempted to set primary driver {DriverId} which does not belong to current season. " +
+                    "Driver PoolId: {DriverPoolId}, Current Season: {CurrentSeasonId}", 
+                    UserId, driverId, selectedDriver.PoolId, currentSeason.Id);
+                ModelState.AddModelError(string.Empty, "You can only set primary drivers from the current season.");
                 await OnGetAsync();
                 return Page();
             }
@@ -506,21 +626,29 @@ namespace WebApp.Pages
                     PoolId = currentSeason.Id
                 };
                 _context.UserPoolPrimaryDrivers.Add(userPoolDriver);
+                _logger.LogInformation("Creating new UserPoolPrimaryDriver record for user {UserId}, pool {PoolId}", 
+                    UserId, currentSeason.Id);
             }
             
             if (setSecondHalf)
             {
                 userPoolDriver.PrimaryDriverSecondHalfId = selectedDriver.Id;
+                _logger.LogInformation("User {UserId} set second half primary driver to {DriverName} ({DriverId}) for season {SeasonId}", 
+                    UserId, selectedDriver.Name, selectedDriver.Id, currentSeason.Id);
             }
             else
             {
                 userPoolDriver.PrimaryDriverFirstHalfId = selectedDriver.Id;
+                _logger.LogInformation("User {UserId} set first half primary driver to {DriverName} ({DriverId}) for season {SeasonId}", 
+                    UserId, selectedDriver.Name, selectedDriver.Id, currentSeason.Id);
             }
             
             await _context.SaveChangesAsync();
             
-            // Update picks logic remains similar but uses currentSeason.Id to filter races
+            // Update picks logic - only updates picks for current season
             var updatedPicksCount = await UpdatePicksForUserAsync(UserId, selectedDriver.Id, targetSecondHalf: setSecondHalf, currentSeason.Id);
+            
+            TempData["Success"] = $"Your {halfType} primary driver has been set to {selectedDriver.Name}. {updatedPicksCount} pick(s) updated.";
             
             await OnGetAsync();
             return Page();
@@ -540,6 +668,7 @@ namespace WebApp.Pages
                     return 0;
                 }
 
+                // Only update picks for the current season
                 var seasonRaces = await _context.Races
                     .Where(r => r.PoolId == currentSeason.Id)
                     .OrderBy(r => r.Date)
@@ -547,7 +676,8 @@ namespace WebApp.Pages
 
                 if (seasonRaces.Count == 0)
                 {
-                    _logger.LogWarning("No races found in current season while updating picks for user {UserId}", userId);
+                    _logger.LogWarning("No races found in current season {SeasonId} while updating picks for user {UserId}", 
+                        currentSeason.Id, userId);
                     return 0;
                 }
 
@@ -569,8 +699,8 @@ namespace WebApp.Pages
 
                 if (!targetRaceIds.Any())
                 {
-                    _logger.LogWarning("No target races found for {Half} while updating picks for user {UserId}", 
-                        halfDescription, userId);
+                    _logger.LogWarning("No target races found for {Half} in season {SeasonId} while updating picks for user {UserId}", 
+                        halfDescription, currentSeason.Id, userId);
                     return 0;
                 }
 
@@ -578,8 +708,8 @@ namespace WebApp.Pages
                     .Where(p => p.UserId == userId && targetRaceIds.Contains(p.RaceId))
                     .ToListAsync();
 
-                _logger.LogInformation("Updating picks for user {UserId} - {Half}. PicksToUpdate: {Count}, NewPrimaryDriverId: {DriverId}", 
-                    userId, halfDescription, picksToUpdate.Count, newPrimaryDriverId);
+                _logger.LogInformation("Updating picks for user {UserId} - {Half} of season {SeasonId}. PicksToUpdate: {Count}, NewPrimaryDriverId: {DriverId}", 
+                    userId, halfDescription, currentSeason.Id, picksToUpdate.Count, newPrimaryDriverId);
 
                 int updatedCount = 0;
                 foreach (var pick in picksToUpdate)
@@ -612,15 +742,20 @@ namespace WebApp.Pages
                     updatedCount++;
                 }
 
-                _logger.LogInformation("Successfully updated {Count} picks for user {UserId} - {Half}", 
-                    updatedCount, userId, halfDescription);
+                if (updatedCount > 0)
+                {
+                    await _context.SaveChangesAsync();
+                }
+
+                _logger.LogInformation("Successfully updated {Count} picks for user {UserId} - {Half} of season {SeasonId}", 
+                    updatedCount, userId, halfDescription, currentSeason.Id);
 
                 return updatedCount;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error updating picks for user {UserId}. NewPrimaryDriverId: {DriverId}, SecondHalf: {SecondHalf}", 
-                    userId, newPrimaryDriverId, targetSecondHalf);
+                _logger.LogError(ex, "Error updating picks for user {UserId}. NewPrimaryDriverId: {DriverId}, SecondHalf: {SecondHalf}, SeasonId: {SeasonId}", 
+                    userId, newPrimaryDriverId, targetSecondHalf, currentSeasonId);
                 throw;
             }
         }

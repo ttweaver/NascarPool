@@ -37,13 +37,13 @@ namespace WebApp.Areas.Manage.Pages.Players
 
             if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
             {
-                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+                currentSeason = _context.Pools.Include(p => p.Members).FirstOrDefault(p => p.Id == cookiePoolId);
             }
 
             // Fallback to latest season if cookie not found or invalid
             if (currentSeason == null)
             {
-                currentSeason = _context.Pools.AsEnumerable()
+                currentSeason = _context.Pools.Include(p => p.Members).AsEnumerable()
                     .OrderByDescending(s => s.CurrentYear)
                     .FirstOrDefault();
             }
@@ -68,9 +68,14 @@ namespace WebApp.Areas.Manage.Pages.Players
 
                 _logger.LogInformation("Loading players for pool {PoolId} ({PoolName})", CurrentPool.Id, CurrentPool.Name);
 
-                // Get all player users
+                // Get user IDs that are part of the current pool
+                var poolUserIds = CurrentPool.Members
+                    .Select(pu => pu.Id)
+                    .ToList();
+
+                // Get only players that are part of the current pool
                 var players = await _context.Users
-                    .Where(u => u.IsPlayer)
+                    .Where(u => u.IsPlayer && poolUserIds.Contains(u.Id))
                     .OrderBy(p => p.FirstName)
                     .ToListAsync();
 

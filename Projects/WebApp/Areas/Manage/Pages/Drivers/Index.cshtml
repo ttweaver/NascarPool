@@ -5,21 +5,9 @@
     ViewData["Title"] = "Drivers";
     var pools = Model.Pools.OrderByDescending(p => p.Year).ToList();
 }
-<h1 class="mb-4">Drivers</h1>
 
 <div class="d-flex align-items-center w-100 mb-3">
-    <form method="get" class="d-flex align-items-center">
-        <label for="PoolId" class="form-label fs-5 fw-bold text-primary me-2 mb-0">Select Pool</label>
-        <select id="PoolId" name="poolId" class="form-select w-auto" onchange="this.form.submit()">
-            @foreach (var pool in pools)
-            {
-                <option value="@pool.Id" selected="@(pool.Id == Model.PoolId ? "selected" : null)">
-                    @pool.Name (@pool.Year)
-                </option>
-            }
-        </select>
-    </form>
-
+    <h1 class="mb-4">Drivers</h1>
     <!-- Button to launch the modal (aligned to the right) -->
     <button type="button" class="btn btn-primary ms-auto" data-bs-toggle="modal" data-bs-target="#createDriverModal">
         Add New Driver

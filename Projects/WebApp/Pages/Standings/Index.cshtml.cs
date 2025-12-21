@@ -35,6 +35,7 @@ namespace WebApp.Pages.Standings
             public string LastName { get; set; } = string.Empty;
             public int TotalPoints { get; set; }
             public int Place { get; set; }
+            public bool IsTied { get; set; }
         }
 
         public class WeekOption
@@ -96,13 +97,13 @@ namespace WebApp.Pages.Standings
 
             if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
             {
-                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+                currentSeason = _context.Pools.Include(p => p.Members).FirstOrDefault(p => p.Id == cookiePoolId);
             }
 
             // Fallback to latest season if cookie not found or invalid
             if (currentSeason == null)
             {
-                currentSeason = _context.Pools.AsEnumerable<Pool>()
+                currentSeason = _context.Pools.Include(p => p.Members).AsEnumerable<Pool>()
                     .OrderByDescending(s => s.CurrentYear)
                     .FirstOrDefault();
             }
@@ -116,6 +117,11 @@ namespace WebApp.Pages.Standings
 
             if (currentSeason == null)
                 return;
+
+            // Get user IDs that are members of the current pool
+            var poolMemberIds = currentSeason.Members
+                .Select(pu => pu.Id)
+                .ToList();
 
             // Check if there are any race results for the current season
             var hasAnyRaceResults = await _context.RaceResults
@@ -142,7 +148,7 @@ namespace WebApp.Pages.Standings
 
             // Calculate current week number based on races with picks that have occurred
             var racesWithPicks = await _context.Picks
-                .Where(p => seasonRaceIds.Contains(p.RaceId))
+                .Where(p => seasonRaceIds.Contains(p.RaceId) && poolMemberIds.Contains(p.UserId))
                 .Select(p => p.RaceId)
                 .Distinct()
                 .ToListAsync();
@@ -166,38 +172,28 @@ namespace WebApp.Pages.Standings
             }
 
             var standingsQuery = await _context.Picks
-                .Where(p => seasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer)
+                .Where(p => seasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer && poolMemberIds.Contains(p.UserId))
                 .GroupBy(p => p.UserId)
                 .Select(g => new
                 {
                     UserId = g.Key,
                     TotalPoints = g.Sum(p => p.Points)
                 })
-                .OrderBy(s => s.TotalPoints)
+                .OrderBy(s => s.TotalPoints) // LOWER points = BETTER rank
                 .ToListAsync();
 
-            // Get usernames for display - filter to only players
+            // Get usernames for display - filter to only players who are pool members
             var userIds = standingsQuery.Select(s => s.UserId).ToList();
             var users = await _context.Users
                 .Players()
-                .Where(u => userIds.Contains(u.Id))
+                .Where(u => userIds.Contains(u.Id) && poolMemberIds.Contains(u.Id))
                 .Select(u => new { u.Id, u.FirstName, u.LastName })
                 .ToListAsync();
 
             var userDictionary = users.ToDictionary(u => u.Id);
 
-            int place = 1;
-            Standings = standingsQuery
-                .Where(s => userDictionary.ContainsKey(s.UserId))
-                .Select(s => new StandingEntry
-                {
-                    UserId = s.UserId,
-                    FirstName = userDictionary.ContainsKey(s.UserId) ? userDictionary[s.UserId].FirstName : string.Empty,
-                    LastName = userDictionary.ContainsKey(s.UserId) ? userDictionary[s.UserId].LastName : string.Empty,
-                    TotalPoints = s.TotalPoints,
-                    Place = place++
-                })
-                .ToList();
+            // Calculate places with tie handling
+            Standings = CalculateStandingsWithTies(standingsQuery, userDictionary);
 
             // Check if we have weekly performance data
             HasWeeklyPerformance = seasonRaces.Any();
@@ -206,8 +202,73 @@ namespace WebApp.Pages.Standings
             var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
             if (!string.IsNullOrEmpty(currentUserId))
             {
-                CurrentUserEncouragementMessage = await CalculateEncouragementMessage(currentUserId, seasonRaceIds);
+                CurrentUserEncouragementMessage = await CalculateEncouragementMessage(currentUserId, seasonRaceIds, poolMemberIds);
             }
+        }
+
+        // Change the signature of CalculateStandingsWithTies to use generic type parameters instead of dynamic
+        private List<StandingEntry> CalculateStandingsWithTies<TStanding, TUser>(
+            List<TStanding> standingsData,
+            Dictionary<string, TUser> userDictionary)
+            where TStanding : class
+            where TUser : class
+        {
+            var standings = new List<StandingEntry>();
+            int currentPlace = 1;
+            int? previousPoints = null;
+            int playersAtCurrentPlace = 0;
+
+            foreach (var standing in standingsData)
+            {
+                // Use reflection to access properties since TStanding is anonymous
+                var userIdProp = standing.GetType().GetProperty("UserId");
+                var totalPointsProp = standing.GetType().GetProperty("TotalPoints") ?? standing.GetType().GetProperty("Points");
+                if (userIdProp == null || totalPointsProp == null)
+                    continue;
+
+                string userId = (string)userIdProp.GetValue(standing)!;
+                int totalPoints = (int)totalPointsProp.GetValue(standing)!;
+
+                if (!userDictionary.ContainsKey(userId))
+                    continue;
+
+                // If points changed from previous entry, advance place
+                if (previousPoints.HasValue && totalPoints != previousPoints.Value)
+                {
+                    currentPlace += playersAtCurrentPlace;
+                    playersAtCurrentPlace = 0;
+                }
+
+                playersAtCurrentPlace++;
+
+                // Check if this player is tied with others at this place
+                bool isTied = standingsData.Count(s =>
+                {
+                    var tp = s.GetType().GetProperty("TotalPoints") ?? s.GetType().GetProperty("Points");
+                    return tp != null && (int)tp.GetValue(s)! == totalPoints;
+                }) > 1;
+
+                // Use reflection to access user properties
+                var user = userDictionary[userId];
+                var firstNameProp = user.GetType().GetProperty("FirstName");
+                var lastNameProp = user.GetType().GetProperty("LastName");
+                string firstName = firstNameProp != null ? (string)firstNameProp.GetValue(user)! : string.Empty;
+                string lastName = lastNameProp != null ? (string)lastNameProp.GetValue(user)! : string.Empty;
+
+                standings.Add(new StandingEntry
+                {
+                    UserId = userId,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    TotalPoints = totalPoints,
+                    Place = currentPlace,
+                    IsTied = isTied
+                });
+
+                previousPoints = totalPoints;
+            }
+
+            return standings;
         }
 
         public async Task<IActionResult> OnGetWeeklyStandingsAsync(int weekNumber)
@@ -216,6 +277,11 @@ namespace WebApp.Pages.Standings
 
             if (currentSeason == null)
                 return new JsonResult(new WeeklyStandingsResponse());
+
+            // Get user IDs that are members of the current pool
+            var poolMemberIds = currentSeason.Members
+                .Select(pu => pu.Id)
+                .ToList();
 
             var now = DateTime.UtcNow;
 
@@ -233,7 +299,7 @@ namespace WebApp.Pages.Standings
 
             // Get races with picks to determine valid week numbers
             var racesWithPicks = await _context.Picks
-                .Where(p => seasonRaceIds.Contains(p.RaceId))
+                .Where(p => seasonRaceIds.Contains(p.RaceId) && poolMemberIds.Contains(p.UserId))
                 .Select(p => p.RaceId)
                 .Distinct()
                 .ToListAsync();
@@ -253,37 +319,27 @@ namespace WebApp.Pages.Standings
 
             // Get standings for ONLY this specific race (not cumulative)
             var standingsQuery = await _context.Picks
-                .Where(p => p.RaceId == targetRace.Id && p.User.IsPlayer)
+                .Where(p => p.RaceId == targetRace.Id && p.User.IsPlayer && poolMemberIds.Contains(p.UserId))
                 .Select(p => new
                 {
                     p.UserId,
                     Points = p.Points
                 })
-                .OrderBy(p => p.Points)
+                .OrderBy(p => p.Points) // LOWER points = BETTER rank
                 .ToListAsync();
 
             // Get usernames for display
             var userIds = standingsQuery.Select(s => s.UserId).ToList();
             var users = await _context.Users
                 .Players()
-                .Where(u => userIds.Contains(u.Id))
+                .Where(u => userIds.Contains(u.Id) && poolMemberIds.Contains(u.Id))
                 .Select(u => new { u.Id, u.FirstName, u.LastName })
                 .ToListAsync();
 
             var userDictionary = users.ToDictionary(u => u.Id);
 
-            int place = 1;
-            var weeklyStandings = standingsQuery
-                .Where(s => userDictionary.ContainsKey(s.UserId))
-                .Select(s => new StandingEntry
-                {
-                    UserId = s.UserId,
-                    FirstName = userDictionary[s.UserId].FirstName,
-                    LastName = userDictionary[s.UserId].LastName,
-                    TotalPoints = s.Points,
-                    Place = place++
-                })
-                .ToList();
+            // Calculate places with tie handling
+            var weeklyStandings = CalculateStandingsWithTies(standingsQuery, userDictionary);
 
             var response = new WeeklyStandingsResponse
             {
@@ -302,6 +358,11 @@ namespace WebApp.Pages.Standings
 
             if (currentSeason == null)
                 return new JsonResult(new ChartDataResponse());
+
+            // Get user IDs that are members of the current pool
+            var poolMemberIds = currentSeason.Members
+                .Select(pu => pu.Id)
+                .ToList();
 
             var now = DateTime.UtcNow;
 
@@ -322,8 +383,8 @@ namespace WebApp.Pages.Standings
             {
                 var racePicks = await _context.Picks
                     .Include(p => p.User)
-                    .Where(p => p.RaceId == race.Id && p.User.IsPlayer)
-                    .OrderBy(p => p.Points)
+                    .Where(p => p.RaceId == race.Id && p.User.IsPlayer && poolMemberIds.Contains(p.UserId))
+                    .OrderBy(p => p.Points) // LOWER points = BETTER rank
                     .Select(p => new { p.UserId, p.Points })
                     .ToListAsync();
 
@@ -338,27 +399,40 @@ namespace WebApp.Pages.Standings
                     PlayerPlaces = new Dictionary<string, int>()
                 };
 
-                int place = 1;
+                // Calculate places with tie handling
+                int currentPlace = 1;
+                int? previousPoints = null;
+                int playersAtCurrentPlace = 0;
+
                 foreach (var pick in racePicks)
                 {
-                    weekData.PlayerPlaces[pick.UserId] = place++;
+                    // If points changed from previous entry, advance place
+                    if (previousPoints.HasValue && pick.Points != previousPoints.Value)
+                    {
+                        currentPlace += playersAtCurrentPlace;
+                        playersAtCurrentPlace = 0;
+                    }
+
+                    playersAtCurrentPlace++;
+                    weekData.PlayerPlaces[pick.UserId] = currentPlace;
+                    previousPoints = pick.Points;
                 }
 
                 weeklyPerformance.Add(weekData);
                 weekNumber++;
             }
 
-            // Get all players who participated
+            // Get all players who participated and are pool members
             var seasonRaceIds = seasonRaces.Select(r => r.Id).ToList();
             var playerIds = await _context.Picks
-                .Where(p => seasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer)
+                .Where(p => seasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer && poolMemberIds.Contains(p.UserId))
                 .Select(p => p.UserId)
                 .Distinct()
                 .ToListAsync();
 
             var players = await _context.Users
                 .Players()
-                .Where(u => playerIds.Contains(u.Id))
+                .Where(u => playerIds.Contains(u.Id) && poolMemberIds.Contains(u.Id))
                 .Select(u => new PlayerInfo
                 {
                     UserId = u.Id,
@@ -386,6 +460,11 @@ namespace WebApp.Pages.Standings
             if (currentSeason == null)
                 return new JsonResult(new CumulativeProgressionResponse());
 
+            // Get user IDs that are members of the current pool
+            var poolMemberIds = currentSeason.Members
+                .Select(pu => pu.Id)
+                .ToList();
+
             var now = DateTime.UtcNow;
 
             // Only get races that have already occurred
@@ -402,23 +481,23 @@ namespace WebApp.Pages.Standings
 
             // Get races with picks
             var racesWithPicks = await _context.Picks
-                .Where(p => seasonRaceIds.Contains(p.RaceId))
+                .Where(p => seasonRaceIds.Contains(p.RaceId) && poolMemberIds.Contains(p.UserId))
                 .Select(p => p.RaceId)
                 .Distinct()
                 .ToListAsync();
 
             var validRaces = seasonRaces.Where(r => racesWithPicks.Contains(r.Id)).ToList();
 
-            // Get all players who participated
+            // Get all players who participated and are pool members
             var playerIds = await _context.Picks
-                .Where(p => seasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer)
+                .Where(p => seasonRaceIds.Contains(p.RaceId) && p.User.IsPlayer && poolMemberIds.Contains(p.UserId))
                 .Select(p => p.UserId)
                 .Distinct()
                 .ToListAsync();
 
             var players = await _context.Users
                 .Players()
-                .Where(u => playerIds.Contains(u.Id))
+                .Where(u => playerIds.Contains(u.Id) && poolMemberIds.Contains(u.Id))
                 .Select(u => new PlayerInfo
                 {
                     UserId = u.Id,
@@ -438,14 +517,14 @@ namespace WebApp.Pages.Standings
 
                 // Calculate cumulative standings
                 var cumulativeStandings = await _context.Picks
-                    .Where(p => racesUpToNow.Contains(p.RaceId) && p.User.IsPlayer)
+                    .Where(p => racesUpToNow.Contains(p.RaceId) && p.User.IsPlayer && poolMemberIds.Contains(p.UserId))
                     .GroupBy(p => p.UserId)
                     .Select(g => new
                     {
                         UserId = g.Key,
                         TotalPoints = g.Sum(p => p.Points)
                     })
-                    .OrderBy(s => s.TotalPoints)
+                    .OrderBy(s => s.TotalPoints) // LOWER points = BETTER rank
                     .ToListAsync();
 
                 var weekData = new CumulativeProgressionData
@@ -456,13 +535,24 @@ namespace WebApp.Pages.Standings
                     PlayerCumulativePoints = new Dictionary<string, int>()
                 };
 
-                // Assign places to all players
-                int place = 1;
+                // Assign places with tie handling
+                int currentPlace = 1;
+                int? previousPoints = null;
+                int playersAtCurrentPlace = 0;
+
                 foreach (var standing in cumulativeStandings)
                 {
-                    weekData.PlayerPlaces[standing.UserId] = place;
+                    // If points changed from previous entry, advance place
+                    if (previousPoints.HasValue && standing.TotalPoints != previousPoints.Value)
+                    {
+                        currentPlace += playersAtCurrentPlace;
+                        playersAtCurrentPlace = 0;
+                    }
+
+                    playersAtCurrentPlace++;
+                    weekData.PlayerPlaces[standing.UserId] = currentPlace;
                     weekData.PlayerCumulativePoints[standing.UserId] = standing.TotalPoints;
-                    place++;
+                    previousPoints = standing.TotalPoints;
                 }
 
                 weeklyProgression.Add(weekData);
@@ -481,7 +571,7 @@ namespace WebApp.Pages.Standings
             return new JsonResult(response);
         }
 
-        private async Task<string?> CalculateEncouragementMessage(string userId, List<int> seasonRaceIds)
+        private async Task<string?> CalculateEncouragementMessage(string userId, List<int> seasonRaceIds, List<string> poolMemberIds)
         {
             // Need at least 2 races with results to compare week-over-week
             if (seasonRaceIds.Count < 2)
@@ -489,7 +579,7 @@ namespace WebApp.Pages.Standings
 
             // Check if there are actually results for multiple races
             var racesWithResults = await _context.Picks
-                .Where(p => seasonRaceIds.Contains(p.RaceId) && p.Points > 0)
+                .Where(p => seasonRaceIds.Contains(p.RaceId) && p.Points > 0 && poolMemberIds.Contains(p.UserId))
                 .Select(p => p.RaceId)
                 .Distinct()
                 .CountAsync();
@@ -503,43 +593,58 @@ namespace WebApp.Pages.Standings
             if (currentStanding == null)
                 return null;
 
-			// Calculate standings after previous race (excluding last race)
-			var previousRaceIds = await _context.Picks
-	                                            .Where(p => seasonRaceIds.Contains(p.RaceId))
-	                                            .Select(p => new { p.RaceId, p.Race.Date })
-	                                            .Distinct()
-	                                            .OrderByDescending(x => x.Date)
-	                                            .Skip(1)
-	                                            .Take(seasonRaceIds.Count - 1)
-	                                            .Select(x => x.RaceId)
-	                                            .ToListAsync();
-			var previousStandingsQuery = await _context.Picks
-                .Where(p => previousRaceIds.Contains(p.RaceId))
+            // Calculate standings after previous race (excluding last race)
+            var previousRaceIds = await _context.Picks
+                .Where(p => seasonRaceIds.Contains(p.RaceId) && poolMemberIds.Contains(p.UserId))
+                .Select(p => new { p.RaceId, p.Race.Date })
+                .Distinct()
+                .OrderByDescending(x => x.Date)
+                .Skip(1)
+                .Take(seasonRaceIds.Count - 1)
+                .Select(x => x.RaceId)
+                .ToListAsync();
+
+            var previousStandingsQuery = await _context.Picks
+                .Where(p => previousRaceIds.Contains(p.RaceId) && p.User.IsPlayer && poolMemberIds.Contains(p.UserId))
                 .GroupBy(p => p.UserId)
                 .Select(g => new
                 {
                     UserId = g.Key,
                     TotalPoints = g.Sum(p => p.Points)
                 })
-                .OrderBy(s => s.TotalPoints)
+                .OrderBy(s => s.TotalPoints) // LOWER points = BETTER rank
                 .ToListAsync();
 
-            var previousPlace = 0;
-            var previousUserPlace = 0;
-            foreach (var entry in previousStandingsQuery)
+            // Calculate previous place with tie handling
+            int previousPlace = 1;
+            int? previousPoints = null;
+            int playersAtCurrentPlace = 0;
+            int? userPreviousPlace = null;
+
+            foreach (var standing in previousStandingsQuery)
             {
-                if (entry.UserId == userId)
+                // If points changed from previous entry, advance place
+                if (previousPoints.HasValue && standing.TotalPoints != previousPoints.Value)
                 {
-                    previousUserPlace = previousPlace;
+                    previousPlace += playersAtCurrentPlace;
+                    playersAtCurrentPlace = 0;
+                }
+
+                playersAtCurrentPlace++;
+
+                if (standing.UserId == userId)
+                {
+                    userPreviousPlace = previousPlace;
                     break;
                 }
-                previousPlace++;
+
+                previousPoints = standing.TotalPoints;
             }
 
-            if (previousUserPlace == 0)
+            if (!userPreviousPlace.HasValue)
                 return null; // User wasn't in previous standings
 
-            int placeDifference = previousUserPlace - currentStanding.Place;
+            int placeDifference = userPreviousPlace.Value - currentStanding.Place;
 
             // Generate encouraging messages based on performance
             if (placeDifference > 0)

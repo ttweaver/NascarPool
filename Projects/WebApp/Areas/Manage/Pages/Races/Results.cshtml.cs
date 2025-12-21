@@ -266,6 +266,8 @@ namespace WebApp.Areas.Manage.Pages.Races
                     "TotalPicks: {TotalPicks}, PicksWithPointChanges: {ChangedPicks}, User: {UserId}", 
                     RaceId, picks.Count, pickPointsUpdated, adminEmail);
 
+                TempData["Success"] = $"Race results saved successfully! {createdCount} created, {updatedCount} updated. {pickPointsUpdated} pick(s) recalculated.";
+
                 return RedirectToPage(new { raceId = RaceId });
             }
             catch (Exception ex)
@@ -332,6 +334,8 @@ namespace WebApp.Areas.Manage.Pages.Races
                     "Race: {RaceName}, PoolId: {PoolId}, TotalPicks: {TotalPicks}, PicksChanged: {ChangedPicks}, " +
                     "User: {UserId}, IP: {IpAddress}", 
                     RaceId, race.Name, race.PoolId, picksBefore.Count, changedCount, adminEmail, ipAddress);
+
+                TempData["Success"] = $"Points recalculated successfully! {changedCount} of {picksBefore.Count} pick(s) updated.";
 
                 return RedirectToPage(new { raceId = RaceId });
             }
