@@ -1,0 +1,191 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.EntityFrameworkCore;
+using WebApp.Data;
+using WebApp.Models;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Linq;
+
+namespace WebApp.Areas.Manage.Pages.Drivers
+{
+    public class IndexModel : PageModel
+    {
+        private readonly ApplicationDbContext _context;
+        public IndexModel(ApplicationDbContext context) => _context = context;
+
+        public IList<Driver> Drivers { get; set; } = default!;
+        public IList<Pool> Pools { get; set; } = default!;
+
+        [BindProperty]
+        public string DriverName { get; set; } = string.Empty;
+
+        [BindProperty]
+        public string CarNumber { get; set; } = string.Empty;
+
+        [BindProperty(SupportsGet = true)]
+        public int? PoolId { get; set; }
+
+        [BindProperty]
+        public int DriverId { get; set; }
+
+        private Pool? GetCurrentSeasonFromCookie()
+        {
+            // Try to get poolId from cookie
+            var poolIdCookie = Request.Cookies["poolId"];
+            Pool? currentSeason = null;
+
+            if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
+            {
+                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+            }
+
+            // Fallback to latest season if cookie not found or invalid
+            if (currentSeason == null)
+            {
+                currentSeason = _context.Pools.AsEnumerable()
+                    .OrderByDescending(s => s.CurrentYear)
+                    .FirstOrDefault();
+            }
+
+            return currentSeason;
+        }
+
+        public async Task OnGetAsync()
+        {
+            Pools = await _context.Pools
+                .OrderByDescending(p => p.Year)
+                .ToListAsync();
+
+            // Use cookie-based season selection if PoolId not explicitly provided
+            if (PoolId == null)
+            {
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason != null)
+                {
+                    PoolId = currentSeason.Id;
+                }
+                else
+                {
+                    var lastestPool = await Pools.GetLatestPoolYearAsync();
+                    PoolId = lastestPool?.Id;
+                }
+            }
+
+            if (PoolId.HasValue)
+            {
+                Drivers = await _context.Drivers
+                    .Include(d => d.Pool)
+                    .Where(d => d.PoolId == PoolId)
+                    .ToListAsync();
+            }
+            else
+            {
+                Drivers = new List<Driver>();
+            }
+        }
+
+        public async Task<IActionResult> OnPostCreateAsync()
+        {
+            Pools = await _context.Pools.OrderByDescending(p => p.Year).ToListAsync();
+            
+            // Use cookie-based season if PoolId not set
+            if (PoolId == null || PoolId == 0)
+            {
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason != null)
+                {
+                    PoolId = currentSeason.Id;
+                }
+                else if (Pools.Any())
+                {
+                    PoolId = Pools.First().Id;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(DriverName) || string.IsNullOrWhiteSpace(CarNumber))
+            {
+                ModelState.AddModelError(string.Empty, "Both Name and Car Number are required.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            var pool = Pools.FirstOrDefault(p => p.Id == PoolId);
+            if (pool == null)
+            {
+                ModelState.AddModelError(string.Empty, "Selected pool not found.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            var driver = new Driver
+            {
+                Name = DriverName.Trim(),
+                CarNumber = CarNumber.Trim(),
+                PoolId = pool.Id
+            };
+
+            _context.Drivers.Add(driver);
+            await _context.SaveChangesAsync();
+
+            return RedirectToPage(new { PoolId = PoolId });
+        }
+
+        public async Task<IActionResult> OnPostEditAsync()
+        {
+            // Ensure pools are available for repopulating the page if we need to redisplay
+            Pools = await _context.Pools.OrderByDescending(p => p.Year).ToListAsync();
+            
+            // Use cookie-based season if PoolId not set
+            if (PoolId == null || PoolId == 0)
+            {
+                var currentSeason = GetCurrentSeasonFromCookie();
+                if (currentSeason != null)
+                {
+                    PoolId = currentSeason.Id;
+                }
+                else if (Pools.Any())
+                {
+                    PoolId = Pools.First().Id;
+                }
+            }
+
+            // Basic validation
+            if (DriverId == 0 || string.IsNullOrWhiteSpace(DriverName) || string.IsNullOrWhiteSpace(CarNumber))
+            {
+                ModelState.AddModelError(string.Empty, "Driver, Name and Car Number are required.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            var driver = await _context.Drivers.FindAsync(DriverId);
+            if (driver == null)
+            {
+                ModelState.AddModelError(string.Empty, "Driver not found.");
+                await OnGetAsync();
+                return Page();
+            }
+
+            // Update fields
+            driver.Name = DriverName.Trim();
+            driver.CarNumber = CarNumber.Trim();
+            driver.PoolId = PoolId.Value;
+
+            _context.Drivers.Update(driver);
+            await _context.SaveChangesAsync();
+
+            return RedirectToPage(new { PoolId = PoolId });
+        }
+
+        public async Task<IActionResult> OnPostDeleteAsync()
+        {
+            var driver = await _context.Drivers.FindAsync(DriverId);
+            if (driver != null)
+            {
+                _context.Drivers.Remove(driver);
+                await _context.SaveChangesAsync();
+            }
+            return RedirectToPage(new { PoolId = PoolId });
+        }
+    }
+}

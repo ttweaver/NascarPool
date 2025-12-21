@@ -8,55 +8,138 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - Fast Lap Fantasy</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/WebApp.styles.css" asp-append-version="true" />
     @await RenderSectionAsync("Styles", required: false)
+    <style>
+        .manager-mode-indicator {
+            background-color: #ffc107;
+            border-bottom: 3px solid #ff9800;
+        }
+        .manager-mode-badge {
+            background-color: #ff9800;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        .brand-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.125rem;
+        }
+        .navbar-brand {
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+    </style>
 </head>
 <body>
     <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3 @(Context.Request.Path.StartsWithSegments("/Manage") ? "manager-mode-indicator" : "")">
             <div class="container">
-                <a class="navbar-brand" asp-area="" asp-page="/Index">Fast Lap Fantasy</a>
+                <div class="brand-container">
+                    <a class="navbar-brand" asp-area="" asp-page="/Index">
+                        Fast Lap Fantasy
+                    </a>
+                    @if (SignInManager.IsSignedIn(User))
+                    {
+                        @await Component.InvokeAsync("PoolSelector")
+                    }
+                </div>
+                @if (Context.Request.Path.StartsWithSegments("/Manage"))
+                {
+                    <span class="manager-mode-badge">MANAGER MODE</span>
+                }
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
                         aria-expanded="false" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
                     <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Index">Home</a>
-                        </li>
-                        @if (SignInManager.IsSignedIn(User))
+                        @if (!Context.Request.Path.StartsWithSegments("/Manage"))
                         {
                             <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Dashboard">Dashboard</a>
+                                <a class="nav-link text-dark" asp-page="/Index">Home</a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link text-dark" asp-area="" asp-page="/Races/Index">Races</a>
-                            </li>
-                            @if (User.IsInRole("Admin"))
+                        }
+                        @if (SignInManager.IsSignedIn(User))
+                        {
+                            @if (Context.Request.Path.StartsWithSegments("/Manage"))
                             {
+                                //Manager Menu
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="" asp-page="/Users/Index">Players</a>
+                                    <a class="nav-link text-dark" asp-area="Manage" asp-page="/Index">Manager Dashboard</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="" asp-page="/Drivers/Index">Drivers</a>
+                                    <a class="nav-link text-dark" asp-area="Manage" asp-page="/Races/Index">Races</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="" asp-page="/Pools/Index">Pools</a>
+                                    <a class="nav-link text-dark" asp-area="Manage" asp-page="/Players/Index">Players</a>
                                 </li>
                                 <li class="nav-item">
-                                    <a class="nav-link text-dark" asp-area="" asp-page="/Help/Index">Setup Guide</a>
+                                    <a class="nav-link text-dark" asp-area="Manage" asp-page="/Drivers/Index">Drivers</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-area="Manage" asp-page="/Pools/Index">Pools</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-area="Manage" asp-page="/Users/Index">Users</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-area="Manage" asp-page="/Help/Index">Setup Guide</a>
+                                </li>
+                            }
+                            else
+                            {
+                                //Player Menu
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-page="/Dashboard">Dashboard</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-page="/Standings/Index">Standings</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-page="/DriverStats/Index">Driver Stats</a>
                                 </li>
                             }
                         }
                     </ul>
-                    <partial name="_LoginPartial" />
+                    <div class="d-flex align-items-center">
+                        <partial name="_LoginPartial" />
+                        @if (SignInManager.IsSignedIn(User) && User.IsInRole("Admin"))
+                        {
+                            <div class="d-flex align-items-center ms-2">
+                                @if (Context.Request.Path.StartsWithSegments("/Manage"))
+                                {
+                                    <a class="btn btn-sm btn-outline-primary" asp-area="" asp-page="/Dashboard">
+                                        <i class="bi bi-person"></i>
+                                        Player Mode
+                                    </a>
+                                }
+                                else
+                                {
+                                    <a class="btn btn-sm btn-warning" asp-area="Manage" asp-page="/Index">
+                                        <i class="bi bi-gear"></i>
+                                        Manager Mode
+                                    </a>
+                                }
+                            </div>
+                        }
+                    </div>
                 </div>
             </div>
         </nav>
     </header>
     <div class="container">
+        @if (SignInManager.IsSignedIn(User))
+        {
+            @await Component.InvokeAsync("SeasonBanner")
+        }
         <main role="main" class="pb-3">
             @RenderBody()
         </main>

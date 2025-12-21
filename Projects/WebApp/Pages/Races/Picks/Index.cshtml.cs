@@ -5,6 +5,7 @@ using WebApp.Data;
 using WebApp.Models;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 namespace WebApp.Pages.Races.Picks
@@ -19,9 +20,11 @@ namespace WebApp.Pages.Races.Picks
 
         public Race? Race { get; set; }
         public List<PlayerPicks> AllPlayerPicks { get; set; } = new();
+        public string? CurrentUserId { get; set; }
 
         public class PlayerPicks
         {
+            public string UserId { get; set; } = string.Empty;
             public string PlayerName { get; set; } = string.Empty;
             public string? Pick1Name { get; set; }
             public string? Pick1CarNumber { get; set; }
@@ -32,12 +35,42 @@ namespace WebApp.Pages.Races.Picks
             public bool HasPicks { get; set; }
         }
 
+        private Pool? GetCurrentSeasonFromCookie()
+        {
+            // Try to get poolId from cookie
+            var poolIdCookie = Request.Cookies["poolId"];
+            Pool? currentSeason = null;
+
+            if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
+            {
+                currentSeason = _context.Pools.FirstOrDefault(p => p.Id == cookiePoolId);
+            }
+
+            // Fallback to latest season if cookie not found or invalid
+            if (currentSeason == null)
+            {
+                currentSeason = _context.Pools.AsEnumerable()
+                    .OrderByDescending(s => s.CurrentYear)
+                    .FirstOrDefault();
+            }
+
+            return currentSeason;
+        }
+
         public async Task<IActionResult> OnGetAsync()
         {
+            CurrentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var currentSeason = GetCurrentSeasonFromCookie();
+            
+            if (currentSeason == null)
+                return NotFound();
+
             Race = await _context.Races
                 .Include(r => r.Pool)
                 .ThenInclude(p => p.Members)
-                .FirstOrDefaultAsync(r => r.Id == RaceId);
+                .Where(r => r.Id == RaceId && r.PoolId == currentSeason.Id && r.Date <= DateTime.Now)
+                .FirstOrDefaultAsync();
 
             if (Race == null)
                 return NotFound();
@@ -63,6 +96,7 @@ namespace WebApp.Pages.Races.Picks
                 var pick = picks.FirstOrDefault(p => p.UserId == member.Id);
                 return new PlayerPicks
                 {
+                    UserId = member.Id,
                     PlayerName = $"{member.FirstName} {member.LastName}",
                     Pick1Name = pick?.Pick1?.Name,
                     Pick1CarNumber = pick?.Pick1?.CarNumber,

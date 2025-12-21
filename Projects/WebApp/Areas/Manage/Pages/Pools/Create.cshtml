@@ -1,0 +1,22 @@
+@page
+@model CreateModel
+@{
+    ViewData["Title"] = "Create Pool";
+}
+<h1 class="mb-4">Create Pool</h1>
+<form method="post" class="card card-body shadow-sm">
+    <div class="mb-3">
+        <label asp-for="Pool.Name" class="form-label"></label>
+        <input asp-for="Pool.Name" class="form-control" />
+        <span asp-validation-for="Pool.Name" class="text-danger"></span>
+    </div>
+    <div class="mb-3">
+        <label asp-for="Pool.Year" class="form-label"></label>
+        <input asp-for="Pool.Year" class="form-control" type="number" min="1900" max="2100" />
+        <span asp-validation-for="Pool.Year" class="text-danger"></span>
+    </div>
+    <div class="d-flex gap-2 mb-2">
+        <button type="submit" class="btn btn-success">Create</button>
+        <a asp-page="Index" class="btn btn-secondary">Back to List</a>
+    </div>
+</form>

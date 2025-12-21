@@ -1,0 +1,108 @@
+@page
+@model AddUsersModel
+@using System.Linq
+@{
+    ViewData["Title"] = "Add Players to Pool";
+}
+<h1 class="mb-4">Add Players to Pool</h1>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div id="statusMessage" class="alert alert-success fade show" role="alert">@Model.StatusMessage</div>
+}
+
+<form method="post" class="card card-body shadow-sm">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+
+    <div class="mb-3">
+        <label class="form-label d-flex align-items-center justify-content-between">
+            <span>Select Players</span>
+            <button id="selectAllBtn" type="button" class="btn btn-sm btn-outline-primary">Select all</button>
+        </label>
+        <input type="hidden" asp-for="PoolId" />
+
+        <div class="border rounded p-2" style="max-height:320px; overflow:auto;">
+            @foreach (var user in Model.Users
+                .OrderBy(u => u.FirstName ?? string.Empty)
+                .ThenBy(u => u.LastName ?? string.Empty))
+            {
+                var checkboxId = $"user_{user.Id}";
+                var displayName = string.IsNullOrWhiteSpace(user.FirstName) && string.IsNullOrWhiteSpace(user.LastName)
+                    ? user.UserName
+                    : $"{user.FirstName} {user.LastName}";
+                <div class="form-check">
+                    <input
+                        class="form-check-input"
+                        type="checkbox"
+                        name="SelectedUserIds"
+                        id="@checkboxId"
+                        value="@user.Id"
+                        @(Model.MemberIds.Contains(user.Id) ? "checked" : "") />
+                    <label class="form-check-label" for="@checkboxId">@displayName</label>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success">Update Players</button>
+        <a asp-page="Index" class="btn btn-secondary">Back to Pools</a>
+    </div>
+</form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var btn = document.getElementById('selectAllBtn');
+        if (!btn) return;
+
+        function updateButtonText(checkboxes) {
+            var allChecked = Array.prototype.every.call(checkboxes, function (cb) { return cb.checked; });
+            btn.textContent = allChecked ? 'Clear all' : 'Select all';
+        }
+
+        btn.addEventListener('click', function () {
+            var checkboxes = document.querySelectorAll('input[name="SelectedUserIds"]');
+            if (checkboxes.length === 0) return;
+
+            var allChecked = Array.prototype.every.call(checkboxes, function (cb) { return cb.checked; });
+            var setChecked = !allChecked;
+
+            Array.prototype.forEach.call(checkboxes, function (cb) { cb.checked = setChecked; });
+            updateButtonText(checkboxes);
+        });
+
+        // Keep button text in sync if user manually toggles checkboxes
+        document.querySelector('.card').addEventListener('change', function (e) {
+            if (e.target && e.target.name === 'SelectedUserIds') {
+                var checkboxes = document.querySelectorAll('input[name="SelectedUserIds"]');
+                updateButtonText(checkboxes);
+            }
+        });
+
+        // Initialize button text on load
+        var initialCheckboxes = document.querySelectorAll('input[name="SelectedUserIds"]');
+        updateButtonText(initialCheckboxes);
+
+        // Hide status message after 5 seconds (uses Bootstrap fade by removing 'show')
+        var status = document.getElementById('statusMessage');
+        if (status) {
+            setTimeout(function () {
+                status.classList.remove('show');
+                // Remove element after transition finishes, fallback remove after 600ms
+                var removed = false;
+                status.addEventListener('transitionend', function () {
+                    if (!removed && status.parentNode) {
+                        status.parentNode.removeChild(status);
+                        removed = true;
+                    }
+                }, { once: true });
+                setTimeout(function () {
+                    if (!removed && status.parentNode) {
+                        status.parentNode.removeChild(status);
+                        removed = true;
+                    }
+                }, 600);
+            }, 3000);
+        }
+    });
+</script>

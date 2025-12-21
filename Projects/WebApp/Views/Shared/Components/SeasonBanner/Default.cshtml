@@ -1,0 +1,28 @@
+@model WebApp.ViewComponents.SeasonBannerViewModel
+
+@if (Model.IsArchived)
+{
+    <div class="alert alert-secondary alert-dismissible fade show mb-3" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-archive me-2 fs-5"></i>
+            <div>
+                <strong>Viewing Archived Season</strong>
+                <span class="ms-2">You are currently viewing the @Model.Year season. This is historical data and cannot be modified.</span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+else if (Model.IsComingUp)
+{
+    <div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="bi bi-calendar-event me-2 fs-5"></i>
+            <div>
+                <strong>Upcoming Season</strong>
+                <span class="ms-2">You are viewing the @Model.Year season. This season has not started yet.</span>
+            </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}

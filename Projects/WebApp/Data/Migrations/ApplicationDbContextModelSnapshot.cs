@@ -270,12 +270,6 @@ namespace WebApp.Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<int?>("PrimaryDriverFirstHalfId")
-                        .HasColumnType("int");
-
-                    b.Property<int?>("PrimaryDriverSecondHalfId")
-                        .HasColumnType("int");
-
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -295,10 +289,6 @@ namespace WebApp.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex")
                         .HasFilter("[NormalizedUserName] IS NOT NULL");
-
-                    b.HasIndex("PrimaryDriverFirstHalfId");
-
-                    b.HasIndex("PrimaryDriverSecondHalfId");
 
                     b.ToTable("AspNetUsers", (string)null);
                 });
@@ -450,6 +440,41 @@ namespace WebApp.Data.Migrations
                     b.ToTable("RaceResults");
                 });
 
+            modelBuilder.Entity("WebApp.Models.UserPoolPrimaryDriver", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("PoolId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PrimaryDriverFirstHalfId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PrimaryDriverSecondHalfId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PoolId");
+
+                    b.HasIndex("PrimaryDriverFirstHalfId");
+
+                    b.HasIndex("PrimaryDriverSecondHalfId");
+
+                    b.HasIndex("UserId", "PoolId")
+                        .IsUnique();
+
+                    b.ToTable("UserPoolPrimaryDrivers");
+                });
+
             modelBuilder.Entity("ApplicationUserPool", b =>
                 {
                     b.HasOne("WebApp.Models.ApplicationUser", null)
@@ -565,21 +590,6 @@ namespace WebApp.Data.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("WebApp.Models.ApplicationUser", b =>
-                {
-                    b.HasOne("WebApp.Models.Driver", "PrimaryDriverFirstHalf")
-                        .WithMany()
-                        .HasForeignKey("PrimaryDriverFirstHalfId");
-
-                    b.HasOne("WebApp.Models.Driver", "PrimaryDriverSecondHalf")
-                        .WithMany()
-                        .HasForeignKey("PrimaryDriverSecondHalfId");
-
-                    b.Navigation("PrimaryDriverFirstHalf");
-
-                    b.Navigation("PrimaryDriverSecondHalf");
-                });
-
             modelBuilder.Entity("WebApp.Models.Driver", b =>
                 {
                     b.HasOne("WebApp.Models.Pool", "Pool")
@@ -664,9 +674,44 @@ namespace WebApp.Data.Migrations
                     b.Navigation("Race");
                 });
 
+            modelBuilder.Entity("WebApp.Models.UserPoolPrimaryDriver", b =>
+                {
+                    b.HasOne("WebApp.Models.Pool", "Pool")
+                        .WithMany("UserPrimaryDrivers")
+                        .HasForeignKey("PoolId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WebApp.Models.Driver", "PrimaryDriverFirstHalf")
+                        .WithMany()
+                        .HasForeignKey("PrimaryDriverFirstHalfId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("WebApp.Models.Driver", "PrimaryDriverSecondHalf")
+                        .WithMany()
+                        .HasForeignKey("PrimaryDriverSecondHalfId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("WebApp.Models.ApplicationUser", "User")
+                        .WithMany("PoolPrimaryDrivers")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Pool");
+
+                    b.Navigation("PrimaryDriverFirstHalf");
+
+                    b.Navigation("PrimaryDriverSecondHalf");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("WebApp.Models.ApplicationUser", b =>
                 {
                     b.Navigation("Picks");
+
+                    b.Navigation("PoolPrimaryDrivers");
                 });
 
             modelBuilder.Entity("WebApp.Models.Pool", b =>
@@ -674,6 +719,8 @@ namespace WebApp.Data.Migrations
                     b.Navigation("Drivers");
 
                     b.Navigation("Races");
+
+                    b.Navigation("UserPrimaryDrivers");
                 });
 
             modelBuilder.Entity("WebApp.Models.Race", b =>

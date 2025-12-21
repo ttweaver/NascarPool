@@ -1,0 +1,254 @@
+@page "{poolId?}"
+@model WebApp.Areas.Manage.Pages.Races.IndexModel
+@using Microsoft.AspNetCore.Mvc.Rendering
+@using WebApp.Helpers
+@{
+    ViewData["Title"] = "Races";
+}
+
+<div class="d-flex align-items-center w-100 mb-3">
+    <h1 class="mb-4">Races</h1>
+    <!-- Button to launch the Create modal (aligned to the right) -->
+    <button type="button" class="btn btn-primary ms-auto" data-bs-toggle="modal" data-bs-target="#createRaceModal">
+        Add New Race
+    </button>
+</div>
+
+    <!-- Create Race Modal -->
+    <div class="modal fade" id="createRaceModal" tabindex="-1" aria-labelledby="createRaceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" asp-page-handler="Create">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="createRaceModalLabel">Create Race</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+                        <div class="mb-3">
+                            <label asp-for="CreateInput.Name" class="form-label">Name</label>
+                            <input asp-for="CreateInput.Name" class="form-control" />
+                            <span asp-validation-for="CreateInput.Name" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="CreateInput.Date" class="form-label">Date</label>
+                            <input asp-for="CreateInput.Date" class="form-control" />
+                            <span asp-validation-for="CreateInput.Date" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="CreateInput.City" class="form-label">City</label>
+                            <input asp-for="CreateInput.City" class="form-control" />
+                            <span asp-validation-for="CreateInput.City" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="CreateInput.State" class="form-label">State</label>
+                            <select asp-for="CreateInput.State" class="form-select">
+                                <option value="">Select a state...</option>
+                                @foreach (var state in UsStates.StateList)
+                                {
+                                    <option value="@state">@state</option>
+                                }
+                            </select>
+                            <span asp-validation-for="CreateInput.State" class="text-danger"></span>
+                        </div>
+                        <input asp-for="CreateInput.PoolId" type="hidden" value="@Model.PoolId" />
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Race Modal -->
+    <div class="modal fade" id="editRaceModal" tabindex="-1" aria-labelledby="editRaceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" asp-page-handler="Edit">
+                    <input asp-for="EditInput.Id" type="hidden" />
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editRaceModalLabel">Edit Race</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-2"></div>
+                        <div class="mb-3">
+                            <label asp-for="EditInput.Name" class="form-label">Name</label>
+                            <input asp-for="EditInput.Name" class="form-control" />
+                            <span asp-validation-for="EditInput.Name" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="EditInput.Date" class="form-label">Date</label>
+                            <input asp-for="EditInput.Date" class="form-control" />
+                            <span asp-validation-for="EditInput.Date" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="EditInput.City" class="form-label">City</label>
+                            <input asp-for="EditInput.City" class="form-control" />
+                            <span asp-validation-for="EditInput.City" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="EditInput.State" class="form-label">State</label>
+                            <select asp-for="EditInput.State" class="form-select">
+                                <option value="">Select a state...</option>
+                                @foreach (var state in UsStates.StateList)
+                                {
+                                    <option value="@state">@state</option>
+                                }
+                            </select>
+                            <span asp-validation-for="EditInput.State" class="text-danger"></span>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Race Modal -->
+    <div class="modal fade" id="deleteRaceModal" tabindex="-1" aria-labelledby="deleteRaceModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" asp-page-handler="Delete">
+                    <input asp-for="DeleteInput.Id" type="hidden" />
+                    <input asp-for="DeleteInput.City" type="hidden" />
+                    <input asp-for="DeleteInput.State" type="hidden" />
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteRaceModalLabel">Delete Race</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete the following race?</p>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Name:</dt>
+                            <dd class="col-sm-8" id="DeleteRaceName"></dd>
+                            <dt class="col-sm-4">Location:</dt>
+                            <dd class="col-sm-8" id="DeleteRaceLocation"></dd>
+                        </dl>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+<table class="table table-striped table-bordered align-middle">
+    <thead class="table-light">
+        <tr>
+            <th>Name</th>
+            <th>Location</th>
+            <th>Date</th>
+            <th>Actions</th>
+            <th>Picks</th>
+            <th>Enter Results</th>
+            <th>View Results</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var race in Model.Races)
+    {
+        <tr>
+            <td>@race.Name</td>
+            <td>@race.Location</td>
+            <td>@race.Date.ToShortDateString()</td>
+            <td>
+                <button type="button" class="btn btn-sm btn-warning me-1"
+                        data-bs-toggle="modal"
+                        data-bs-target="#editRaceModal"
+                        data-race-id="@race.Id"
+                        data-race-name="@race.Name"
+                        data-race-date="@race.Date.ToString("yyyy-MM-dd")"
+                        data-race-city="@race.City"
+                        data-race-state="@race.State">
+                    Edit
+                </button>
+                <button type="button" class="btn btn-sm btn-danger"
+                        data-bs-toggle="modal"
+                        data-bs-target="#deleteRaceModal"
+                        data-race-id="@race.Id"
+                        data-race-name="@race.Name"
+                        data-race-city="@race.City"
+                        data-race-state="@race.State"
+                        data-race-location="@race.Location">
+                    Delete
+                </button>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-secondary"
+                    asp-page="Picks/Edit"
+                    asp-route-raceId="@race.Id">
+                    Edit All Picks
+                </a>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-info"
+                    asp-page="Results"
+                    asp-route-raceId="@race.Id">
+                    Enter Results
+                </a>
+            </td>
+            <td>
+                <a class="btn btn-sm btn-success"
+                   asp-page="ViewResults"
+                   asp-route-raceId="@race.Id">
+                    View Results
+                </a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
+
+@section Scripts {
+<script>
+    // Edit modal population
+    var editRaceModal = document.getElementById('editRaceModal');
+    editRaceModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        document.getElementById('EditInput_Id').value = button.getAttribute('data-race-id');
+        document.getElementById('EditInput_Name').value = button.getAttribute('data-race-name');
+        document.getElementById('EditInput_Date').value = button.getAttribute('data-race-date');
+        document.getElementById('EditInput_City').value = button.getAttribute('data-race-city');
+        document.getElementById('EditInput_State').value = button.getAttribute('data-race-state');
+    });
+
+    // Delete modal population
+    var deleteRaceModal = document.getElementById('deleteRaceModal');
+    deleteRaceModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        document.getElementById('DeleteInput_Id').value = button.getAttribute('data-race-id');
+        document.getElementById('DeleteRaceName').textContent = button.getAttribute('data-race-name');
+        document.getElementById('DeleteInput_City').value = button.getAttribute('data-race-city');
+        document.getElementById('DeleteInput_State').value = button.getAttribute('data-race-state');
+        document.getElementById('DeleteRaceLocation').textContent = button.getAttribute('data-race-location');
+    });
+
+    // Show modal on validation error
+    window.addEventListener('DOMContentLoaded', function () {
+        var activeModal = '@Model.ActiveModal';
+        if (activeModal) {
+            var modalElement = null;
+            if (activeModal === 'create') {
+                modalElement = document.getElementById('createRaceModal');
+            } else if (activeModal === 'edit') {
+                modalElement = document.getElementById('editRaceModal');
+            } else if (activeModal === 'delete') {
+                modalElement = document.getElementById('deleteRaceModal');
+            }
+                
+            if (modalElement) {
+                var modal = new bootstrap.Modal(modalElement);
+                modal.show();
+            }
+        }
+    });
+</script>
+}

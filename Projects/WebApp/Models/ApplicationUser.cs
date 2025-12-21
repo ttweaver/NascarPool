@@ -11,10 +11,6 @@ namespace WebApp.Models
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public bool IsPlayer { get; set; } = true;
-        public int? PrimaryDriverFirstHalfId { get; set; }
-        public int? PrimaryDriverSecondHalfId { get; set; }
-        public Driver PrimaryDriverFirstHalf { get; set; } = default!;
-        public Driver PrimaryDriverSecondHalf { get; set; } = default!;
 
         // Not mapped properties used for binding & validation on the Create page.
         // These are not persisted to the database; PasswordHash will be stored instead.
@@ -31,5 +27,8 @@ namespace WebApp.Models
 
 		public ICollection<Pick> Picks { get; set; } = new List<Pick>();
         public ICollection<Pool> Pools { get; set; } = new List<Pool>();
+        
+        // Add collection for pool-specific primary drivers
+        public ICollection<UserPoolPrimaryDriver> PoolPrimaryDrivers { get; set; } = new List<UserPoolPrimaryDriver>();
     }
 }
