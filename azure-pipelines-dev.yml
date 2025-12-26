@@ -38,7 +38,7 @@ steps:
   inputs:
     folderPath: '$(Build.SourcesDirectory)/published'
     enableXmlTransform: false
-    jsonTargetFiles: '**/appsettings.json'
+    enableJsonFileVariableSubstitution: true
 
 - task: CopyFiles@2
   inputs:
