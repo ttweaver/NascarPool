@@ -34,13 +34,6 @@ steps:
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
 
-- task: FileTransform@2
-  inputs:
-    folderPath: '$(Build.ArtifactStagingDirectory)'
-    enableXmlTransform: false
-    jsonTargetFiles: '**/appsettings.json'
-    errorOnInvalidSubstitution: true
-
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: '$(build.artifactStagingDirectory)'
