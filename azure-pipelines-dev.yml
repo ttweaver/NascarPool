@@ -10,9 +10,15 @@ pool:
   vmImage: 'windows-latest'
 
 variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Debug'
+- name: solution
+  value: '**/*.sln'
+- name: buildPlatform
+  value: 'Any CPU'
+- name: buildConfiguration
+  value: 'Debug'
+- group: Common-Settings
+- group: Database-Dev
+
 
 steps:
 - task: NuGetToolInstaller@1
@@ -27,6 +33,13 @@ steps:
     msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=FileSystem /p:SkipInvalidConfigurations=true /p:PublishUrl="$(build.artifactStagingDirectory)"'
     platform: '$(buildPlatform)'
     configuration: '$(buildConfiguration)'
+
+- task: FileTransform@2
+  inputs:
+    folderPath: '$(Build.ArtifactStagingDirectory)'
+    enableXmlTransform: false
+    jsonTargetFiles: '**/appsettings.json'
+    errorOnInvalidSubstitution: true
 
 - task: PublishBuildArtifacts@1
   inputs:
