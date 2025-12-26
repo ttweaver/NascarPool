@@ -37,8 +37,10 @@ steps:
 - task: FileTransform@2
   inputs:
     folderPath: '$(Build.SourcesDirectory)/published'
-    enableXmlTransform: false
+    fileType: json
+    targetFiles: '**/appsettings*.json'
     enableJsonFileVariableSubstitution: true
+
 
 - task: CopyFiles@2
   inputs:
