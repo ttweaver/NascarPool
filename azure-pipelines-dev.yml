@@ -38,10 +38,11 @@ steps:
   displayName: Publish
   inputs:
     command: publish
+    publishWebProjects: false
     projects: '**/WebApp.csproj'
     arguments: '--configuration $(buildConfiguration) --output $(Build.SourcesDirectory)/published'
     zipAfterPublish: false
-
+    modifyOutputPath: false
 - task: FileTransform@2
   inputs:
     folderPath: '$(Build.SourcesDirectory)/published'
