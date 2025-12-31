@@ -38,7 +38,7 @@ steps:
   displayName: Publish
   inputs:
     command: publish
-    publishWebProjects: true
+    projects: '**/WebApp.csproj'
     arguments: '--configuration $(buildConfiguration) --output $(Build.SourcesDirectory)/published'
     zipAfterPublish: false
 
