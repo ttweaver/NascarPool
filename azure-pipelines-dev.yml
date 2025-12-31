@@ -25,13 +25,13 @@ steps:
   displayName: Restore
   inputs:
     command: restore
-    projects: '**/*.csproj'
+    projects: '**/WebApp.csproj'
 
 - task: DotNetCoreCLI@2
   displayName: Build
   inputs:
     command: build
-    projects: '**/*.csproj'
+    projects: '**/WebApp.csproj'
     arguments: '--configuration $(buildConfiguration)'
 
 - task: DotNetCoreCLI@2
