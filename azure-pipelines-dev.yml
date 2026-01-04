@@ -55,13 +55,21 @@ steps:
 - task: CopyFiles@2
   inputs:
     SourceFolder: '$(Agent.TempDirectory)'
-    Contents: '**'
+    Contents: '**/appsettings*.json'
     TargetFolder: '$(Build.SourcesDirectory)/published'
 - task: FileTransform@2
   inputs:
     folderPath: '$(Build.SourcesDirectory)/published'
     jsonTargetFiles: '**/appsettings*.json'
     enableXmlTransform: false
+
+- powershell: |
+    # Delete the existing appsettings.json
+    Remove-Item "$(Build.SourcesDirectory)/published/appsettings.json" -ErrorAction SilentlyContinue
+
+    # Rename the template file
+    Rename-Item "$(Build.SourcesDirectory)/published/appsettings.template.json" "appsettings.json"
+  displayName: Delete and rename appsettings files
 
 - task: CopyFiles@2
   inputs:
