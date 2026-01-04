@@ -10,23 +10,68 @@ pool:
   vmImage: 'windows-latest'
 
 variables:
-  solution: '**/*.sln'
-  buildPlatform: 'Any CPU'
-  buildConfiguration: 'Release'
+- name: solution
+  value: '**/*.sln'
+- name: buildPlatform
+  value: 'Any CPU'
+- name: buildConfiguration
+  value: 'Release'
+- group: Common-Settings
+- group: Database-Prod
 
 steps:
-- task: NuGetToolInstaller@1
-
-- task: NuGetCommand@2
+- task: DotNetCoreCLI@2
+  displayName: Restore
   inputs:
-    restoreSolution: '$(solution)'
+    command: restore
+    projects: '**/WebApp.csproj'
 
-- task: VSBuild@1
+- task: DotNetCoreCLI@2
+  displayName: Build
   inputs:
-    solution: '$(solution)'
-    msbuildArgs: '/p:DeployOnBuild=true /p:WebPublishMethod=FileSystem /p:SkipInvalidConfigurations=true /p:PublishUrl="$(build.artifactStagingDirectory)"'
-    platform: '$(buildPlatform)'
-    configuration: '$(buildConfiguration)'
+    command: build
+    projects: '**/WebApp.csproj'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: Publish
+  inputs:
+    command: publish
+    publishWebProjects: false
+    projects: '**/WebApp.csproj'
+    arguments: '--configuration $(buildConfiguration) --output $(Build.SourcesDirectory)/published'
+    zipAfterPublish: false
+    modifyOutputPath: false
+
+- task: DownloadSecureFile@1
+  name: appsettingsTemplate
+  inputs:
+    secureFile: 'appsettings.template.json'
+
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: '$(Agent.TempDirectory)'
+    Contents: '**/appsettings*.json'
+    TargetFolder: '$(Build.SourcesDirectory)/published'
+- task: FileTransform@2
+  inputs:
+    folderPath: '$(Build.SourcesDirectory)/published'
+    jsonTargetFiles: '**/appsettings*.json'
+    enableXmlTransform: false
+
+- powershell: |
+    # Delete the existing appsettings.json
+    Remove-Item "$(Build.SourcesDirectory)/published/appsettings.json" -ErrorAction SilentlyContinue
+
+    # Rename the template file
+    Rename-Item "$(Build.SourcesDirectory)/published/appsettings.template.json" "appsettings.json"
+  displayName: Delete and rename appsettings files
+
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: '$(Build.SourcesDirectory)/published'
+    Contents: '**'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
 
 - task: PublishBuildArtifacts@1
   inputs:
