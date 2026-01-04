@@ -48,21 +48,21 @@ builder.Services.AddRazorPages(options =>
 builder.Services.AddAuthentication()
     .AddGoogle(options =>
     {
-        options.ClientId = builder.Configuration["ConnectionStrings:Authentication:Google:ClientId"] ?? throw new InvalidOperationException("Google ClientId not found.");
-        options.ClientSecret = builder.Configuration["ConnectionStrings:Authentication:Google:ClientSecret"] ?? throw new InvalidOperationException("Google ClientSecret not found.");
+        options.ClientId = builder.Configuration["Authentication:Google:ClientId"] ?? throw new InvalidOperationException("Google ClientId not found.");
+        options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"] ?? throw new InvalidOperationException("Google ClientSecret not found.");
     })
     .AddFacebook(options =>
     {
-        options.AppId = builder.Configuration["ConnectionStrings:Authentication:Facebook:AppId"] ?? throw new InvalidOperationException("Facebook AppId not found.");
-        options.AppSecret = builder.Configuration["ConnectionStrings:Authentication:Facebook:AppSecret"] ?? throw new InvalidOperationException("Facebook AppSecret not found.");
+        options.AppId = builder.Configuration["Authentication:Facebook:AppId"] ?? throw new InvalidOperationException("Facebook AppId not found.");
+        options.AppSecret = builder.Configuration["Authentication:Facebook:AppSecret"] ?? throw new InvalidOperationException("Facebook AppSecret not found.");
     })
     .AddTwitter(options =>
     {
-        options.ConsumerKey = builder.Configuration["ConnectionStrings:Authentication:Twitter:ClientId"] ?? throw new InvalidOperationException("Twitter ClientId not found.");
-        options.ConsumerSecret = builder.Configuration["ConnectionStrings:Authentication:Twitter:ClientSecret"] ?? throw new InvalidOperationException("Twitter ClientSecret not found.");
+        options.ConsumerKey = builder.Configuration["Authentication:Twitter:ClientId"] ?? throw new InvalidOperationException("Twitter ClientId not found.");
+        options.ConsumerSecret = builder.Configuration["Authentication:Twitter:ClientSecret"] ?? throw new InvalidOperationException("Twitter ClientSecret not found.");
     });
 
-builder.Services.Configure<WebApp.Services.EmailSettings>(builder.Configuration.GetSection("ConnectionStrings:EmailSettings"));
+builder.Services.Configure<WebApp.Services.EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, WebApp.Services.EmailSender>();
 
 builder.Services.Configure<IdentityPasskeyOptions>(options =>

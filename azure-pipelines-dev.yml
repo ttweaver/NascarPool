@@ -1,0 +1,87 @@
+# ASP.NET
+# Build and test ASP.NET projects.
+# Add steps that publish symbols, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/apps/aspnet/build-aspnet-4
+
+trigger:
+- develop
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+- name: solution
+  value: '**/*.sln'
+- name: buildPlatform
+  value: 'Any CPU'
+- name: buildConfiguration
+  value: 'Debug'
+- group: Common-Settings
+- group: Database-Dev
+
+
+steps:
+- task: DotNetCoreCLI@2
+  displayName: Restore
+  inputs:
+    command: restore
+    projects: '**/WebApp.csproj'
+
+- task: DotNetCoreCLI@2
+  displayName: Build
+  inputs:
+    command: build
+    projects: '**/WebApp.csproj'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: Publish
+  inputs:
+    command: publish
+    publishWebProjects: false
+    projects: '**/WebApp.csproj'
+    arguments: '--configuration $(buildConfiguration) --output $(Build.SourcesDirectory)/published'
+    zipAfterPublish: false
+    modifyOutputPath: false
+
+- task: DownloadSecureFile@1
+  name: appsettingsTemplate
+  inputs:
+    secureFile: 'appsettings.template.json'
+
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: '$(Agent.TempDirectory)'
+    Contents: '**/appsettings*.json'
+    TargetFolder: '$(Build.SourcesDirectory)/published'
+- task: FileTransform@2
+  inputs:
+    folderPath: '$(Build.SourcesDirectory)/published'
+    jsonTargetFiles: '**/appsettings*.json'
+    enableXmlTransform: false
+
+- powershell: |
+    # Delete the existing appsettings.json
+    Remove-Item "$(Build.SourcesDirectory)/published/appsettings.json" -ErrorAction SilentlyContinue
+
+    # Rename the template file
+    Rename-Item "$(Build.SourcesDirectory)/published/appsettings.template.json" "appsettings.json"
+  displayName: Delete and rename appsettings files
+
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: '$(Build.SourcesDirectory)/published'
+    Contents: '**'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(build.artifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
+    
+
+- task: VSTest@2
+  inputs:
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
