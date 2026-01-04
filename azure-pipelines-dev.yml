@@ -54,7 +54,7 @@ steps:
     script: 'echo $(appsettingsTemplate.secureFilePath)'
 - task: CopyFiles@2
   inputs:
-    SourceFolder: '$(appsettingsTemplate.secureFilePath)'
+    SourceFolder: '$(Agent.TempDirectory)'
     Contents: '**'
     TargetFolder: '$(Build.SourcesDirectory)/published'
 - task: FileTransform@2
