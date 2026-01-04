@@ -43,6 +43,17 @@ steps:
     arguments: '--configuration $(buildConfiguration) --output $(Build.SourcesDirectory)/published'
     zipAfterPublish: false
     modifyOutputPath: false
+
+- task: DownloadSecureFile@1
+  name: appsettingsTemplate
+  inputs:
+    secureFile: 'appsettings.template.json'
+
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: '$(appsettingsTemplate.secureFilePath)'
+    Contents: '**'
+    TargetFolder: '$(Build.SourcesDirectory)/published'
 - task: FileTransform@2
   inputs:
     folderPath: '$(Build.SourcesDirectory)/published'
