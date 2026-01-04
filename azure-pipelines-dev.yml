@@ -49,6 +49,9 @@ steps:
   inputs:
     secureFile: 'appsettings.template.json'
 
+- task: CmdLine@2
+  inputs:
+    script: 'echo $(appsettingsTemplate.secureFilePath)'
 - task: CopyFiles@2
   inputs:
     SourceFolder: '$(appsettingsTemplate.secureFilePath)'
