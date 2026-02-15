@@ -73,7 +73,7 @@ builder.Services.Configure<IdentityPasskeyOptions>(options =>
 
 builder.Services.ConfigureApplicationCookie(options =>
 {
-    options.ExpireTimeSpan = TimeSpan.FromMinutes(1);
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(20);
     options.SlidingExpiration = true;
 });
 
