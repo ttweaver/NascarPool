@@ -71,6 +71,12 @@ builder.Services.Configure<IdentityPasskeyOptions>(options =>
 	options.ChallengeSize = 64;
 });
 
+builder.Services.ConfigureApplicationCookie(options =>
+{
+    options.ExpireTimeSpan = TimeSpan.FromMinutes(1);
+    options.SlidingExpiration = true;
+});
+
 try
 {
     Log.Information("Starting web application");
