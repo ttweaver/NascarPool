@@ -257,22 +257,59 @@
             });
         });
         
-        // Prevent form submission if validation fails
+        // Handle form submission - only submit valid rows
+        let isResubmitting = false;
         form.addEventListener('submit', function(e) {
+            // If we're resubmitting after disabling invalid rows, allow it
+            if (isResubmitting) {
+                return true;
+            }
+
             const validation = validateAll();
-            
+
             if (validation.hasDuplicates || validation.hasMissingPrimary || validation.hasMissingPicks) {
                 e.preventDefault();
-                
-                // Scroll to first error
-                const firstErrorRow = document.querySelector('tr.has-duplicate, tr.missing-primary, tr.missing-picks');
-                if (firstErrorRow) {
-                    firstErrorRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+                // Count invalid and valid rows
+                const invalidRows = document.querySelectorAll('tr.has-duplicate, tr.missing-primary, tr.missing-picks');
+                const totalRows = document.querySelectorAll('tr[data-row-index]').length;
+                const validRows = totalRows - invalidRows.length;
+
+                if (validRows === 0) {
+                    // Scroll to first error
+                    if (invalidRows.length > 0) {
+                        invalidRows[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    alert('No valid rows to submit. Please fix the validation errors.');
+                    return false;
                 }
-                
+
+                // Ask user if they want to submit only valid rows
+                const message = `Found ${invalidRows.length} invalid row(s) out of ${totalRows} total.\n\n` +
+                                `Do you want to save the ${validRows} valid row(s) and skip the invalid ones?`;
+
+                if (!confirm(message)) {
+                    // Scroll to first error
+                    if (invalidRows.length > 0) {
+                        invalidRows[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                    return false;
+                }
+
+                // Disable inputs for invalid rows so they won't be submitted
+                invalidRows.forEach(row => {
+                    const inputs = row.querySelectorAll('input, select');
+                    inputs.forEach(input => {
+                        input.disabled = true;
+                    });
+                });
+
+                // Now submit the form programmatically
+                isResubmitting = true;
+                form.submit();
                 return false;
             }
-            
+
             return true;
         });
     });

@@ -307,17 +307,21 @@ namespace WebApp.Areas.Manage.Pages.Races.Picks
                 {
                     _logger.LogWarning("Bulk pick save had {ErrorCount} validation errors. RaceId: {RaceId}, Admin: {AdminEmail}", 
                         errorCount, RaceId, adminEmail);
-
-                    var picks = await _context.Picks.Where(p => p.RaceId == RaceId).ToListAsync();
-                    UserPicks = picks.ToDictionary(p => p.UserId, p => p);
-                    return Page();
                 }
 
-                _logger.LogInformation("Bulk pick save completed successfully. RaceId: {RaceId}, Race: {RaceName}, PoolId: {PoolId}, " +
+                _logger.LogInformation("Bulk pick save completed. RaceId: {RaceId}, Race: {RaceName}, PoolId: {PoolId}, " +
                     "Created: {CreatedCount}, Updated: {UpdatedCount}, Errors: {ErrorCount}, Admin: {AdminEmail}, IP: {IpAddress}", 
                     RaceId, Race.Name, Race.PoolId, createdCount, updatedCount, errorCount, adminEmail, ipAddress);
 
-                TempData["SuccessMessage"] = $"Picks saved successfully!";
+                var totalSaved = createdCount + updatedCount;
+                if (errorCount > 0)
+                {
+                    TempData["SuccessMessage"] = $"Saved {totalSaved} pick(s) successfully. {errorCount} row(s) had validation errors and were skipped.";
+                }
+                else
+                {
+                    TempData["SuccessMessage"] = $"All picks saved successfully! ({totalSaved} pick(s))";
+                }
 
                 return RedirectToPage(new { raceId = RaceId });
             }

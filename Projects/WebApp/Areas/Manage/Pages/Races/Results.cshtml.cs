@@ -24,6 +24,10 @@ namespace WebApp.Areas.Manage.Pages.Races
 
         [BindProperty(SupportsGet = true)]
         public int RaceId { get; set; }
+        
+        [BindProperty(SupportsGet = true)]
+        public bool ShowAllDrivers { get; set; }
+        
         public Race? Race { get; set; }
         public List<Driver> Drivers { get; set; } = new();
         public Dictionary<int, RaceResult> DriverResults { get; set; } = new();
@@ -74,10 +78,32 @@ namespace WebApp.Areas.Manage.Pages.Races
                     return RedirectToPage("/Races/Index", new { area = "Manage" });
                 }
 
-                Drivers = await _context.Drivers
-                    .Where(d => d.Pool.Id == Race.Pool.Id)
-                    .OrderBy(d => d.CarNumber)
-                    .ToListAsync();
+                // Get drivers based on ShowAllDrivers checkbox
+                if (ShowAllDrivers)
+                {
+                    Drivers = await _context.Drivers
+                        .Where(d => d.Pool.Id == Race.Pool.Id)
+                        .OrderBy(d => d.CarNumber)
+                        .ToListAsync();
+                }
+                else
+                {
+                    // Get driver IDs that have been picked for this race
+                    var pick1Ids = _context.Picks.Where(p => p.RaceId == RaceId).Select(p => p.Pick1Id);
+                    var pick2Ids = _context.Picks.Where(p => p.RaceId == RaceId).Select(p => p.Pick2Id);
+                    var pick3Ids = _context.Picks.Where(p => p.RaceId == RaceId).Select(p => p.Pick3Id);
+
+                    var pickedDriverIds = await pick1Ids
+                        .Union(pick2Ids)
+                        .Union(pick3Ids)
+                        .Distinct()
+                        .ToListAsync();
+
+                    Drivers = await _context.Drivers
+                        .Where(d => d.Pool.Id == Race.Pool.Id && pickedDriverIds.Contains(d.Id))
+                        .OrderBy(d => d.CarNumber)
+                        .ToListAsync();
+                }
 
                 var results = await _context.RaceResults
                     .Where(r => r.RaceId == RaceId)
@@ -86,8 +112,8 @@ namespace WebApp.Areas.Manage.Pages.Races
                 DriverResults = results.ToDictionary(r => r.DriverId, r => r);
 
                 _logger.LogInformation("Race results page loaded successfully. RaceId: {RaceId}, Race: {RaceName}, " +
-                    "PoolId: {PoolId}, DriverCount: {DriverCount}, ExistingResultCount: {ResultCount}", 
-                    RaceId, Race.Name, Race.PoolId, Drivers.Count, results.Count);
+                    "PoolId: {PoolId}, DriverCount: {DriverCount}, ExistingResultCount: {ResultCount}, ShowAllDrivers: {ShowAllDrivers}", 
+                    RaceId, Race.Name, Race.PoolId, Drivers.Count, results.Count, ShowAllDrivers);
 
                 return Page();
             }
@@ -124,10 +150,32 @@ namespace WebApp.Areas.Manage.Pages.Races
                         RaceId, currentSeason.Id, Race.PoolId);
                 }
 
-                Drivers = await _context.Drivers
-                    .Where(d => d.Pool.Id == Race.Pool.Id)
-                    .OrderBy(d => d.CarNumber)
-                    .ToListAsync();
+                // Get drivers based on ShowAllDrivers checkbox
+                if (ShowAllDrivers)
+                {
+                    Drivers = await _context.Drivers
+                        .Where(d => d.Pool.Id == Race.Pool.Id)
+                        .OrderBy(d => d.CarNumber)
+                        .ToListAsync();
+                }
+                else
+                {
+                    // Get driver IDs that have been picked for this race
+                    var pick1Ids = _context.Picks.Where(p => p.RaceId == RaceId).Select(p => p.Pick1Id);
+                    var pick2Ids = _context.Picks.Where(p => p.RaceId == RaceId).Select(p => p.Pick2Id);
+                    var pick3Ids = _context.Picks.Where(p => p.RaceId == RaceId).Select(p => p.Pick3Id);
+
+                    var pickedDriverIds = await pick1Ids
+                        .Union(pick2Ids)
+                        .Union(pick3Ids)
+                        .Distinct()
+                        .ToListAsync();
+
+                    Drivers = await _context.Drivers
+                        .Where(d => d.Pool.Id == Race.Pool.Id && pickedDriverIds.Contains(d.Id))
+                        .OrderBy(d => d.CarNumber)
+                        .ToListAsync();
+                }
 
                 var driverIds = Request.Form["DriverIds"].ToArray();
                 var places = Request.Form["Places"].ToArray();
@@ -268,7 +316,7 @@ namespace WebApp.Areas.Manage.Pages.Races
 
                 TempData["Success"] = $"Race results saved successfully! {createdCount} created, {updatedCount} updated. {pickPointsUpdated} pick(s) recalculated.";
 
-                return RedirectToPage(new { raceId = RaceId });
+                return RedirectToPage(new { raceId = RaceId, showAllDrivers = ShowAllDrivers });
             }
             catch (Exception ex)
             {
@@ -337,7 +385,7 @@ namespace WebApp.Areas.Manage.Pages.Races
 
                 TempData["Success"] = $"Points recalculated successfully! {changedCount} of {picksBefore.Count} pick(s) updated.";
 
-                return RedirectToPage(new { raceId = RaceId });
+                return RedirectToPage(new { raceId = RaceId, showAllDrivers = ShowAllDrivers });
             }
             catch (Exception ex)
             {

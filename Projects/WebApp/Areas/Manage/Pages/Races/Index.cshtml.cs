@@ -301,6 +301,7 @@ namespace WebApp.Areas.Manage.Pages.Races
                 Races = await _context.Races
                     .Include(r => r.Pool)
                     .Where(r => r.PoolId == PoolId)
+                    .OrderBy(r => r.Date)
                     .ToListAsync();
             }
             else

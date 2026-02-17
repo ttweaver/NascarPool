@@ -93,11 +93,6 @@ namespace WebApp.Pages
             if (!string.IsNullOrEmpty(poolIdCookie) && int.TryParse(poolIdCookie, out var cookiePoolId))
             {
                 currentSeason = _context.Pools.Include(p => p.Members).FirstOrDefault(p => p.Id == cookiePoolId);
-                if (currentSeason != null)
-                {
-                    _logger.LogInformation("Using season from poolId cookie. PoolId: {PoolId}, Year: {Year}", 
-                        currentSeason.Id, currentSeason.Year);
-                }
             }
 
             // Fallback to latest season if cookie not found or invalid
