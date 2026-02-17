@@ -1,5 +1,6 @@
 ﻿@using WebApp.Models
 @inject SignInManager<ApplicationUser> SignInManager
+@inject IWebHostEnvironment Environment
 
 <!DOCTYPE html>
 <html lang="en">
@@ -16,6 +17,10 @@
         .manager-mode-indicator {
             background-color: #ffc107;
             border-bottom: 3px solid #ff9800;
+        }
+        .nonproduction-indicator {
+            background-color: #ffc107;
+            padding: 5px;
         }
         .manager-mode-badge {
             background-color: #ff9800;
@@ -43,8 +48,8 @@
         <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3 @(Context.Request.Path.StartsWithSegments("/Manage") ? "manager-mode-indicator" : "")">
             <div class="container">
                 <div class="brand-container">
-                    <a class="navbar-brand" asp-area="" asp-page="/Index">
-                        Fast Lap Fantasy
+                    <a class="navbar-brand @(!Environment.IsProduction() ? "nonproduction-indicator" : "")" asp-area="" asp-page="/Index">
+                        Fast Lap Fantasy@(Environment.IsDevelopment() ? " - Local" : !Environment.IsProduction() ? " - dev" : "")
                     </a>
                     @if (SignInManager.IsSignedIn(User))
                     {
