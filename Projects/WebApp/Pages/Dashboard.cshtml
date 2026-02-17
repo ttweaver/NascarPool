@@ -202,11 +202,17 @@
                             </div>
                         }
 
-                        @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today)
+                        @if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Now)
                         {
                             <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editPicksModal">
                                 <i class="bi bi-plus-circle-fill"></i> Make your picks for this week
                             </button>
+                        }
+                        else
+                        {
+                            <div class="alert alert-warning mt-2">
+                                <i class="bi bi-exclamation-triangle-fill"></i> You missed making picks for this week. The race has already started or concluded.
+                            </div>
                         }
                     }
                 </div>

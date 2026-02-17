@@ -30,6 +30,14 @@
     <input type="hidden" name="RaceId" value="@Model.RaceId" />
     <button type="submit" class="btn btn-success mb-3">Save Results</button>
     <a asp-page="/Races/Index" class="btn btn-secondary mb-3 ms-2">Back to Races</a>
+    <div class="form-check mb-3">
+        <input class="form-check-input" type="checkbox" id="showAllDrivers" 
+               @(Model.ShowAllDrivers ? "checked" : "") 
+               onchange="window.location.href = '?raceId=@Model.RaceId&showAllDrivers=' + this.checked;" />
+        <label class="form-check-label" for="showAllDrivers">
+            Show all drivers (not just picked drivers)
+        </label>
+    </div>
     <table class="table table-bordered">
         <thead>
             <tr>

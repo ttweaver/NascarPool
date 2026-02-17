@@ -40,7 +40,7 @@ namespace WebApp.Areas.Manage.Pages.Races
             public string Name { get; set; } = default!;
 
             [Required(ErrorMessage = "Race date is required.")]
-            [DataType(DataType.Date)]
+            [DataType(DataType.DateTime)]
             public DateTime Date { get; set; }
 
             [Required(ErrorMessage = "City is required.")]
@@ -65,7 +65,7 @@ namespace WebApp.Areas.Manage.Pages.Races
             public string Name { get; set; } = default!;
 
             [Required(ErrorMessage = "Race date is required.")]
-            [DataType(DataType.Date)]
+            [DataType(DataType.DateTime)]
             public DateTime Date { get; set; }
 
             [Required(ErrorMessage = "City is required.")]
@@ -301,6 +301,7 @@ namespace WebApp.Areas.Manage.Pages.Races
                 Races = await _context.Races
                     .Include(r => r.Pool)
                     .Where(r => r.PoolId == PoolId)
+                    .OrderBy(r => r.Date)
                     .ToListAsync();
             }
             else

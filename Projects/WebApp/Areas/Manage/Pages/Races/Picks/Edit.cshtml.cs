@@ -267,7 +267,6 @@ namespace WebApp.Areas.Manage.Pages.Races.Picks
                         existingPick.Pick2Id = pick2Id;
                         existingPick.Pick3Id = pick3Id;
                         _context.Picks.Update(existingPick);
-                        updatedCount++;
 
                         _logger.LogInformation("Pick updated via bulk edit. User: {UserName} ({UserId}), Race: {RaceId} ({RaceName}), " +
                             "Pick1: {OldPick1} -> {NewPick1}, Pick2: {OldPick2} -> {NewPick2}, Pick3: {OldPick3} -> {NewPick3}, " +
@@ -287,7 +286,6 @@ namespace WebApp.Areas.Manage.Pages.Races.Picks
                             Pick3Id = pick3Id
                         };
                         _context.Picks.Add(pick);
-                        createdCount++;
 
                         _logger.LogInformation("Pick created via bulk edit. User: {UserName} ({UserId}), Race: {RaceId} ({RaceName}), " +
                             "Pick1: {Pick1}, Pick2: {Pick2}, Pick3: {Pick3}, Admin: {AdminEmail}, IP: {IpAddress}", 
@@ -295,25 +293,35 @@ namespace WebApp.Areas.Manage.Pages.Races.Picks
                             pick1Name, pick2Name, pick3Name, 
                             adminEmail, ipAddress);
                     }
+
+                    // Save changes immediately after validating each user
+                    await _context.SaveChangesAsync();
+
+                    if (existingPick != null)
+                        updatedCount++;
+                    else
+                        createdCount++;
                 }
 
-                if (!ModelState.IsValid)
+                if (errorCount > 0)
                 {
                     _logger.LogWarning("Bulk pick save had {ErrorCount} validation errors. RaceId: {RaceId}, Admin: {AdminEmail}", 
                         errorCount, RaceId, adminEmail);
-
-                    var picks = await _context.Picks.Where(p => p.RaceId == RaceId).ToListAsync();
-                    UserPicks = picks.ToDictionary(p => p.UserId, p => p);
-                    return Page();
                 }
 
-                await _context.SaveChangesAsync();
-
-                _logger.LogInformation("Bulk pick save completed successfully. RaceId: {RaceId}, Race: {RaceName}, PoolId: {PoolId}, " +
+                _logger.LogInformation("Bulk pick save completed. RaceId: {RaceId}, Race: {RaceName}, PoolId: {PoolId}, " +
                     "Created: {CreatedCount}, Updated: {UpdatedCount}, Errors: {ErrorCount}, Admin: {AdminEmail}, IP: {IpAddress}", 
                     RaceId, Race.Name, Race.PoolId, createdCount, updatedCount, errorCount, adminEmail, ipAddress);
 
-                TempData["SuccessMessage"] = $"Picks saved successfully!";
+                var totalSaved = createdCount + updatedCount;
+                if (errorCount > 0)
+                {
+                    TempData["SuccessMessage"] = $"Saved {totalSaved} pick(s) successfully. {errorCount} row(s) had validation errors and were skipped.";
+                }
+                else
+                {
+                    TempData["SuccessMessage"] = $"All picks saved successfully! ({totalSaved} pick(s))";
+                }
 
                 return RedirectToPage(new { raceId = RaceId });
             }

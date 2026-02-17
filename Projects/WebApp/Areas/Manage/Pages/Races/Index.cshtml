@@ -32,7 +32,7 @@
                         </div>
                         <div class="mb-3">
                             <label asp-for="CreateInput.Date" class="form-label">Date</label>
-                            <input asp-for="CreateInput.Date" class="form-control" />
+                            <input asp-for="CreateInput.Date" type="datetime-local" class="form-control" />
                             <span asp-validation-for="CreateInput.Date" class="text-danger"></span>
                         </div>
                         <div class="mb-3">
@@ -81,7 +81,7 @@
                         </div>
                         <div class="mb-3">
                             <label asp-for="EditInput.Date" class="form-label">Date</label>
-                            <input asp-for="EditInput.Date" class="form-control" />
+                            <input asp-for="EditInput.Date" type="datetime-local" class="form-control" />
                             <span asp-validation-for="EditInput.Date" class="text-danger"></span>
                         </div>
                         <div class="mb-3">
@@ -159,14 +159,14 @@
         <tr>
             <td>@race.Name</td>
             <td>@race.Location</td>
-            <td>@race.Date.ToShortDateString()</td>
+            <td>@race.Date.ToString("M/d/yyyy h:mm tt")</td>
             <td>
                 <button type="button" class="btn btn-sm btn-warning me-1"
                         data-bs-toggle="modal"
                         data-bs-target="#editRaceModal"
                         data-race-id="@race.Id"
                         data-race-name="@race.Name"
-                        data-race-date="@race.Date.ToString("yyyy-MM-dd")"
+                        data-race-date="@race.Date.ToString("yyyy-MM-ddTHH:mm")"
                         data-race-city="@race.City"
                         data-race-state="@race.State">
                     Edit
