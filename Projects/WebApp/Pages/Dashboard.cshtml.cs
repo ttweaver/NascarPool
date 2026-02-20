@@ -60,6 +60,8 @@ namespace WebApp.Pages
         }
 
         public IEnumerable<PlayerRaceResult>? CurrentWeekPlayerResults { get; set; }
+        public Race? MostRecentCompletedRace { get; set; }
+        public IEnumerable<PlayerRaceResult>? MostRecentPlayerResults { get; set; }
 
         public Dictionary<int, HashSet<int>> UserPicksByRaceId { get; set; } = new();
 
@@ -229,6 +231,50 @@ namespace WebApp.Pages
                         }
 
                         CurrentWeekPlayerResults = weekResults;
+                    }
+                }
+
+                // Get most recent completed race and calculate player results
+                MostRecentCompletedRace = await _context.Races
+                    .Where(r => r.Pool.Id == currentSeason.Id && r.Date <= DateTime.Today)
+                    .OrderByDescending(r => r.Date)
+                    .FirstOrDefaultAsync();
+
+                if (MostRecentCompletedRace != null)
+                {
+                    var recentRacePicks = await _context.Picks
+                        .Where(p => p.RaceId == MostRecentCompletedRace.Id && p.User.IsPlayer && poolMemberIds.Contains(p.UserId))
+                        .Include(p => p.User)
+                        .OrderBy(p => p.Points) // Lower points = better rank
+                        .ToListAsync();
+
+                    if (recentRacePicks.Any())
+                    {
+                        var recentResults = new List<PlayerRaceResult>();
+                        int place = 1;
+                        int? prevPoints = null;
+                        int playersAtPlace = 0;
+
+                        foreach (var pick in recentRacePicks)
+                        {
+                            if (prevPoints.HasValue && pick.Points != prevPoints.Value)
+                            {
+                                place += playersAtPlace;
+                                playersAtPlace = 0;
+                            }
+
+                            playersAtPlace++;
+                            recentResults.Add(new PlayerRaceResult
+                            {
+                                Place = place,
+                                PlayerName = $"{pick.User.FirstName} {pick.User.LastName}",
+                                Points = pick.Points
+                            });
+
+                            prevPoints = pick.Points;
+                        }
+
+                        MostRecentPlayerResults = recentResults;
                     }
                 }
 
