@@ -219,69 +219,72 @@
             </div>
         </div>
 
-        <!-- Current Week Race Results Tile (Player Standings) -->
+        <!-- Most Recent Race Player Results Tile (Player Standings) -->
         <div class="col-md-6 mb-3">
             <div class="card shadow-sm h-100 border-warning">
                 <div class="card-body">
-                    <h5 class="card-title"><i class="bi bi-bar-chart-fill text-warning"></i> This Week's Player Results</h5>
-                    <div class="mb-2 text-muted">
-                        <i class="bi bi-calendar-check text-info"></i> @Model.CurrentRace.Name — @Model.CurrentRace.Date.ToString("MMMM d, yyyy")
-                    </div>
-
-                    @if (Model.CurrentWeekPlayerResults != null && Model.CurrentWeekPlayerResults.Any())
+                    <h5 class="card-title"><i class="bi bi-bar-chart-fill text-warning"></i> Most Recent Race Results</h5>
+                    @if (Model.MostRecentCompletedRace != null)
                     {
-                        <table class="table table-sm table-bordered table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th><i class="bi bi-trophy"></i> Place</th>
-                                    <th><i class="bi bi-person"></i> Player</th>
-                                    <th><i class="bi bi-star"></i> Points</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var result in Model.CurrentWeekPlayerResults)
-                                {
-                                    var isCurrentUser = result.PlayerName == User.Identity?.Name;
-                                    <tr class="@(isCurrentUser ? "table-primary" : "")">
-                                        <td class="fw-bold">
-                                            @if (result.Place == 1)
-                                            {
-                                                <i class="bi bi-trophy-fill text-warning"></i>
-                                            }
-                                            else if (result.Place == 2)
-                                            {
-                                                <i class="bi bi-trophy-fill text-secondary"></i>
-                                            }
-                                            else if (result.Place == 3)
-                                            {
-                                                <i class="bi bi-trophy-fill text-danger"></i>
-                                            }
-                                            @result.Place
-                                        </td>
-                                        <td>
-                                            @if (isCurrentUser)
-                                            {
-                                                <i class="bi bi-person-fill text-primary"></i>
-                                            }
-                                            @result.PlayerName @(isCurrentUser ? "(You)" : "")
-                                        </td>
-                                        <td>@result.Points</td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </table>
-                        <a href="/Standings?raceId=@Model.CurrentRace.Id" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye"></i> View Full Details</a>
-                    }
-                    else if (Model.CurrentRace.Date <= DateTime.Today)
-                    {
-                        <div class="alert alert-info" role="alert">
-                            <i class="bi bi-info-circle-fill"></i> <strong>Results Coming Soon!</strong> Player results for this race are typically available within 2-3 days after the race concludes. Check back soon!
+                        <div class="mb-2 text-muted">
+                            <i class="bi bi-calendar-check text-info"></i> @Model.MostRecentCompletedRace.Name — @Model.MostRecentCompletedRace.Date.ToString("MMMM d, yyyy")
                         </div>
+
+                        @if (Model.MostRecentPlayerResults != null && Model.MostRecentPlayerResults.Any())
+                        {
+                            <table class="table table-sm table-bordered table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th><i class="bi bi-trophy"></i> Place</th>
+                                        <th><i class="bi bi-person"></i> Player</th>
+                                        <th><i class="bi bi-star"></i> Points</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var result in Model.MostRecentPlayerResults)
+                                    {
+                                        var isCurrentUser = result.PlayerName == User.Identity?.Name;
+                                        <tr class="@(isCurrentUser ? "table-primary" : "")">
+                                            <td class="fw-bold">
+                                                @if (result.Place == 1)
+                                                {
+                                                    <i class="bi bi-trophy-fill text-warning"></i>
+                                                }
+                                                else if (result.Place == 2)
+                                                {
+                                                    <i class="bi bi-trophy-fill text-secondary"></i>
+                                                }
+                                                else if (result.Place == 3)
+                                                {
+                                                    <i class="bi bi-trophy-fill text-danger"></i>
+                                                }
+                                                @result.Place
+                                            </td>
+                                            <td>
+                                                @if (isCurrentUser)
+                                                {
+                                                    <i class="bi bi-person-fill text-primary"></i>
+                                                }
+                                                @result.PlayerName @(isCurrentUser ? "(You)" : "")
+                                            </td>
+                                            <td>@result.Points</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                            <a href="/Standings?raceId=@Model.MostRecentCompletedRace.Id" class="btn btn-outline-primary btn-sm"><i class="bi bi-eye"></i> View Full Details</a>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info" role="alert">
+                                <i class="bi bi-info-circle-fill"></i> <strong>Results Coming Soon!</strong> Player results for this race are typically available within 2-3 days after the race concludes. Check back soon!
+                            </div>
+                        }
                     }
                     else
                     {
                         <div class="text-secondary">
-                            <i class="bi bi-clock-history"></i> Player results will be available after the race is completed (typically within 2-3 days).
+                            <i class="bi bi-hourglass-split"></i> No races have been completed yet this season.
                         </div>
                     }
                 </div>
@@ -618,7 +621,7 @@ else if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today &&
                                         data-race-name="@result.Race.Name" 
                                         data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")"
                                         data-is-pick="@(isUserPick ? "true" : "false")"
-                                        class="@(isUserPick ? "table-success" : "")">
+                                        class="@(isUserPick ? "table-success" : "")" title="@(isUserPick ? "Your pick" : "")">
                                         <td>
                                             @if (result.Place == 1)
                                             {
@@ -654,7 +657,7 @@ else if (Model.CurrentRace != null && Model.CurrentRace.Date > DateTime.Today &&
                                         data-race-name="@result.Race.Name" 
                                         data-race-date="@result.Race.Date.ToString("MMMM d, yyyy")"
                                         data-is-pick="@(isUserPick ? "true" : "false")"
-                                        class="@(isUserPick ? "table-success" : "")">
+                                        class="@(isUserPick ? "table-success" : "")" title="@(isUserPick ? "Your pick" : "")">
                                         <td>
                                             @if (result.Place == 1)
                                             {
