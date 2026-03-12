@@ -18,8 +18,10 @@ namespace WebApp.Areas.Manage.Pages.Races
 
         public IList<Race> Races { get; set; } = default!;
 
+        public int? CurrentRaceId { get; set; }
+
         public SelectList PoolSelectList { get; set; } = default!;
-        
+
         [BindProperty(SupportsGet = true)]
         public int? PoolId { get; set; }
         public Pool? LatestPool { get; set; }
@@ -303,6 +305,13 @@ namespace WebApp.Areas.Manage.Pages.Races
                     .Where(r => r.PoolId == PoolId)
                     .OrderBy(r => r.Date)
                     .ToListAsync();
+
+                // Determine the current race (next upcoming race or currently happening)
+                var now = DateTime.Now;
+                CurrentRaceId = Races
+                    .Where(r => r.Date >= now.AddDays(-1)) // Include races from yesterday onwards
+                    .OrderBy(r => r.Date)
+                    .FirstOrDefault()?.Id;
             }
             else
             {

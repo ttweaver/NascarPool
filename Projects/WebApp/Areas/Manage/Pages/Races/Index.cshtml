@@ -156,7 +156,9 @@
     <tbody>
     @foreach (var race in Model.Races)
     {
-        <tr>
+        var isCurrentRace = race.Id == Model.CurrentRaceId;
+        var rowClass = isCurrentRace ? "table-primary fw-bold" : "";
+        <tr class="@rowClass">
             <td>@race.Name</td>
             <td>@race.Location</td>
             <td>@race.Date.ToString("M/d/yyyy h:mm tt")</td>
