@@ -9,6 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
+using WebApp.Services;
 
 namespace WebApp.Pages
 {
@@ -18,12 +19,14 @@ namespace WebApp.Pages
         private readonly ApplicationDbContext _context;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ILogger<DashboardModel> _logger;
+        private readonly ISmsService _smsService;
 
-        public DashboardModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ILogger<DashboardModel> logger)
+        public DashboardModel(ApplicationDbContext context, UserManager<ApplicationUser> userManager, ILogger<DashboardModel> logger, ISmsService smsService)
         {
             _context = context;
             _userManager = userManager;
             _logger = logger;
+            _smsService = smsService;
         }
 
         public string UserId { get; set; }
@@ -600,6 +603,9 @@ namespace WebApp.Pages
                 _logger.LogInformation("Picks saved successfully for user {UserId} on race {RaceId}. PickId: {PickId}", 
                     userId, RaceId, pick.Id);
 
+                // Send SMS notifications
+                await SendPickNotificationsAsync(RaceId, currentSeason.Id, race.Name);
+
                 return RedirectToPage();
             }
             catch (Exception ex)
@@ -798,6 +804,119 @@ namespace WebApp.Pages
                 _logger.LogError(ex, "Error updating picks for user {UserId}. NewPrimaryDriverId: {DriverId}, SecondHalf: {SecondHalf}, SeasonId: {SeasonId}", 
                     userId, newPrimaryDriverId, targetSecondHalf, currentSeasonId);
                 throw;
+            }
+        }
+
+        private async Task SendPickNotificationsAsync(int raceId, int poolId, string raceName)
+        {
+            try
+            {
+                // Get all pool members who are players
+                var poolMembers = await _context.Pools
+                    .Where(p => p.Id == poolId)
+                    .SelectMany(p => p.Members)
+                    .Where(m => m.IsPlayer)
+                    .ToListAsync();
+
+                if (!poolMembers.Any())
+                {
+                    _logger.LogWarning("No pool members found for pool {PoolId} when sending SMS notifications", poolId);
+                    return;
+                }
+
+                // Get all picks for this race from pool members
+                var racePickUserIds = await _context.Picks
+                    .Where(p => p.RaceId == raceId && poolMembers.Select(m => m.Id).Contains(p.UserId))
+                    .Select(p => p.UserId)
+                    .ToListAsync();
+
+                var usersWithPicks = poolMembers.Where(m => racePickUserIds.Contains(m.Id)).ToList();
+                var usersWithoutPicks = poolMembers.Where(m => !racePickUserIds.Contains(m.Id)).ToList();
+
+                // Check if all picks are complete
+                if (usersWithoutPicks.Count == 0)
+                {
+                    // All picks are in - send group notification
+                    _logger.LogInformation("All picks complete for race {RaceId} ({RaceName}). Sending group notification to {Count} players.", 
+                        raceId, raceName, poolMembers.Count);
+
+                    var phoneNumbers = poolMembers
+                        .Where(m => !string.IsNullOrWhiteSpace(m.PhoneNumber) && m.SmsOptIn)
+                        .Select(m => m.PhoneNumber!)
+                        .ToList();
+
+                    if (phoneNumbers.Any())
+                    {
+                        var message = $"All picks are in for {raceName}! Good luck everyone!";
+                        await _smsService.SendGroupSmsAsync(phoneNumbers, message);
+
+                        _logger.LogInformation("Group SMS sent for race {RaceId} to {Count} players (opted-in only)", raceId, phoneNumbers.Count);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("No phone numbers available or no users opted in for SMS in pool {PoolId}", poolId);
+                    }
+                }
+                else
+                {
+                    // Not all picks are in - check if we need to send a reminder
+                    var today = DateTime.Today;
+
+                    // Check if a reminder was already sent today for this race
+                    var reminderSentToday = await _context.SmsReminderLogs
+                        .AnyAsync(log => log.RaceId == raceId && log.SentDate.Date == today);
+
+                    if (!reminderSentToday)
+                    {
+                        _logger.LogInformation("Not all picks complete for race {RaceId} ({RaceName}). Sending reminder. " +
+                            "Players with picks: {WithPicks}, Players without picks: {WithoutPicks}", 
+                            raceId, raceName, usersWithPicks.Count, usersWithoutPicks.Count);
+
+                        var missingPlayerNames = usersWithoutPicks
+                            .Select(u => $"{u.FirstName} {u.LastName}")
+                            .OrderBy(name => name)
+                            .ToList();
+
+                        var phoneNumbers = poolMembers
+                            .Where(m => !string.IsNullOrWhiteSpace(m.PhoneNumber))
+                            .Select(m => m.PhoneNumber!)
+                            .ToList();
+
+                        if (phoneNumbers.Any())
+                        {
+                            var playerList = string.Join(", ", missingPlayerNames);
+                            var message = $"Reminder: Picks needed for {raceName}. Still waiting on: {playerList}";
+
+                            await _smsService.SendGroupSmsAsync(phoneNumbers, message);
+
+                            // Log that reminder was sent
+                            var reminderLog = new SmsReminderLog
+                            {
+                                RaceId = raceId,
+                                SentDate = DateTime.Now,
+                                Message = message
+                            };
+                            _context.SmsReminderLogs.Add(reminderLog);
+                            await _context.SaveChangesAsync();
+
+                            _logger.LogInformation("Reminder SMS sent for race {RaceId} to {Count} players. Missing picks: {MissingPlayers}", 
+                                raceId, phoneNumbers.Count, playerList);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("No phone numbers available for pool members in pool {PoolId}", poolId);
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Reminder already sent today for race {RaceId}. Skipping duplicate reminder.", raceId);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending SMS notifications for race {RaceId}", raceId);
+                // Don't throw - we don't want SMS failures to break pick saving
             }
         }
     }

@@ -37,6 +37,36 @@
                 <label asp-for="Input.ConfirmPassword">Confirm Password</label>
                 <span asp-validation-for="Input.ConfirmPassword" class="text-danger"></span>
             </div>
+
+            <hr />
+            <h4>SMS Notifications (Optional)</h4>
+            <p class="text-muted small">
+                Receive race reminders and pool updates via text message. Standard message and data rates may apply.
+            </p>
+
+            <div class="form-floating mb-3">
+                <input asp-for="Input.PhoneNumber" class="form-control" autocomplete="tel" placeholder="Phone Number" />
+                <label asp-for="Input.PhoneNumber">Phone Number</label>
+                <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+                <small class="text-muted d-block mt-1">Format: +1-555-123-4567 or (555) 123-4567</small>
+            </div>
+
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" asp-for="Input.SmsOptIn" id="smsOptIn" />
+                <label class="form-check-label" for="smsOptIn">
+                    <strong>@Html.DisplayNameFor(m => m.Input.SmsOptIn)</strong>
+                </label>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        By checking this box, you consent to receive automated text messages from Fast Lap Fantasy 
+                        about race reminders and pool notifications. Message frequency varies. Message and data rates may apply. 
+                        Reply STOP to opt-out at any time. Reply HELP for help. 
+                        See our <a asp-page="/TermsOfService">Terms of Service</a> and 
+                        <a asp-page="/Privacy">Privacy Policy</a> for more information.
+                    </small>
+                </div>
+            </div>
+
             <button id="registerSubmit" type="submit" class="w-100 btn btn-lg btn-primary">Register</button>
         </form>
     </div>

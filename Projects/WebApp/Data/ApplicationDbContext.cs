@@ -20,6 +20,7 @@ namespace WebApp.Data
         public DbSet<ApplicationUser> Users { get; set; }
         public DbSet<AllowedUsers> AllowedUsers { get; set; }
         public DbSet<UserPoolPrimaryDriver> UserPoolPrimaryDrivers { get; set; }
+        public DbSet<SmsReminderLog> SmsReminderLogs { get; set; }
 
 		protected override void OnModelCreating(ModelBuilder builder)
         {
