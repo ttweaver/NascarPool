@@ -13,11 +13,13 @@ namespace WebApp.Services
     {
         private readonly SmsSettings _settings;
         private readonly ILogger<TwilioSmsService> _logger;
+        private readonly ISystemSettingsService _systemSettingsService;
 
-        public TwilioSmsService(IOptions<SmsSettings> options, ILogger<TwilioSmsService> logger)
+        public TwilioSmsService(IOptions<SmsSettings> options, ILogger<TwilioSmsService> logger, ISystemSettingsService systemSettingsService)
         {
             _settings = options?.Value ?? throw new ArgumentNullException(nameof(options));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _systemSettingsService = systemSettingsService ?? throw new ArgumentNullException(nameof(systemSettingsService));
 
             if (_settings.EnableSms && !string.IsNullOrEmpty(_settings.AccountSid) && !string.IsNullOrEmpty(_settings.AuthToken))
             {
@@ -27,9 +29,12 @@ namespace WebApp.Services
 
         public async Task SendSmsAsync(string phoneNumber, string message)
         {
-            if (!_settings.EnableSms)
+            // Check database setting first, fallback to config setting
+            var smsEnabled = await _systemSettingsService.GetBoolSettingAsync("EnableSms", _settings.EnableSms);
+
+            if (!smsEnabled)
             {
-                _logger.LogInformation("SMS is disabled. Would have sent to {PhoneNumber}: {Message}", phoneNumber, message);
+                _logger.LogInformation("SMS is disabled via system settings. Would have sent to {PhoneNumber}: {Message}", phoneNumber, message);
                 return;
             }
 
@@ -58,9 +63,12 @@ namespace WebApp.Services
 
         public async Task SendGroupSmsAsync(List<string> phoneNumbers, string message)
         {
-            if (!_settings.EnableSms)
+            // Check database setting first, fallback to config setting
+            var smsEnabled = await _systemSettingsService.GetBoolSettingAsync("EnableSms", _settings.EnableSms);
+
+            if (!smsEnabled)
             {
-                _logger.LogInformation("SMS is disabled. Would have sent to {Count} recipients: {Message}", 
+                _logger.LogInformation("SMS is disabled via system settings. Would have sent to {Count} recipients: {Message}", 
                     phoneNumbers.Count, message);
                 return;
             }

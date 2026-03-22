@@ -95,6 +95,9 @@
                                 <li class="nav-item">
                                     <a class="nav-link text-dark" asp-area="Manage" asp-page="/Users/Index">Users</a>
                                 </li>
+                                 <li class="nav-item">
+                                    <a class="nav-link text-dark" asp-area="Manage" asp-page="/Settings">Settings</a>
+                                </li>
                                 <li class="nav-item">
                                     <a class="nav-link text-dark" asp-area="Manage" asp-page="/Help/Index">Setup Guide</a>
                                 </li>
@@ -151,25 +154,26 @@
     </div>
 
     <footer class="border-top footer text-muted">
-        <div class="container">
+        <div class="container-fluid px-4 py-3 px-sm-4 py-sm-0">
             <div class="row">
-                <div class="col-md-12 text-center">
-                    &copy; 2025 Fast Lap Fantasy
-                    <span class="mx-2">|</span>
-                    <a asp-area="" asp-page="/About">About</a>
-                    <span class="mx-2">|</span>
-                    <a asp-area="" asp-page="/Contact">Contact</a>
-                    <span class="mx-2">|</span>
-                    <a asp-area="" asp-page="/Privacy">Privacy</a>
-                    <span class="mx-2">|</span>
-                    <a asp-area="" asp-page="/TermsOfService">Terms of Service</a>
+                <div class="col-12 text-center">
+                    <div class="d-flex flex-column flex-sm-row flex-wrap justify-content-center align-items-center gap-1 gap-sm-2" style="font-size: 0.875rem;">
+                        <span>&copy; 2025 Fast Lap Fantasy</span>
+                        <span class="d-none d-sm-inline mx-1">|</span>
+                        <a asp-area="" asp-page="/About">About</a>
+                        <span class="d-none d-sm-inline mx-1">|</span>
+                        <a asp-area="" asp-page="/Contact">Contact</a>
+                        <span class="d-none d-sm-inline mx-1">|</span>
+                        <a asp-area="" asp-page="/Privacy">Privacy</a>
+                        <span class="d-none d-sm-inline mx-1">|</span>
+                        <a asp-area="" asp-page="/TermsOfService">Terms</a>
+                    </div>
                 </div>
             </div>
             <div class="row mt-2">
-                <div class="col-md-12 text-center">
-                    <small class="text-muted">
-                        SMS Terms: Message frequency varies. Message and data rates may apply. 
-                        Text STOP to opt-out, HELP for help.
+                <div class="col-12 text-center">
+                    <small class="text-muted d-block" style="font-size: 0.7rem; line-height: 1.4;">
+                        SMS Terms: Message frequency varies. Message and data rates may apply. Text STOP to opt-out, HELP for help.
                     </small>
                 </div>
             </div>
