@@ -1,0 +1,96 @@
+@page
+@model AboutModel
+@{
+    ViewData["Title"] = "About Fast Lap Fantasy";
+}
+
+<div class="container">
+    <h1>@ViewData["Title"]</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <h2>Welcome to Fast Lap Fantasy</h2>
+            <p class="lead">
+                Your premier NASCAR fantasy pool management platform
+            </p>
+            
+            <h3 class="mt-4">Who We Are</h3>
+            <p>
+                Fast Lap Fantasy is a dedicated NASCAR fantasy sports platform that helps racing fans 
+                organize and manage fantasy pools throughout the racing season. Whether you're running 
+                a casual pool with friends or managing a competitive league, our platform provides the 
+                tools you need to track picks, standings, and race results.
+            </p>
+            
+            <h3 class="mt-4">What We Do</h3>
+            <p>Our platform offers:</p>
+            <ul>
+                <li><strong>Pool Management:</strong> Create and manage multiple fantasy pools with customizable settings</li>
+                <li><strong>Pick Tracking:</strong> Easy-to-use interface for submitting and managing driver picks</li>
+                <li><strong>Real-time Standings:</strong> Up-to-date leaderboards and statistics</li>
+                <li><strong>Race Reminders:</strong> Optional SMS notifications to ensure you never miss a pick deadline</li>
+                <li><strong>Driver Statistics:</strong> Comprehensive performance data and analytics</li>
+            </ul>
+            
+            <h3 class="mt-4">Business Information</h3>
+            <div class="card">
+                <div class="card-body">
+                    <p class="mb-2"><strong>Business Name:</strong> Fast Lap Fantasy</p>
+                    <p class="mb-2"><strong>Business Type:</strong> Online Fantasy Sports Platform</p>
+                    <p class="mb-2"><strong>Industry:</strong> Entertainment / Fantasy Sports</p>
+                    <p class="mb-2"><strong>Established:</strong> 2026</p>
+                    <p class="mb-2"><strong>Location:</strong> Mountain House, CA, United States</p>
+                    <p class="mb-2"><strong>Website:</strong> <a href="https://fastlapfantasy.net">https://fastlapfantasy.net</a></p>
+                    <p class="mb-2"><strong>Contact:</strong> <a href="mailto:support@fastlapfantasy.net">support@fastlapfantasy.net</a></p>
+                </div>
+            </div>
+            
+            <h3 class="mt-4">SMS Communications</h3>
+            <p>
+                We offer optional SMS notifications to keep you informed about:
+            </p>
+            <ul>
+                <li>Upcoming race pick deadlines</li>
+                <li>Pool updates and announcements</li>
+                <li>Important account notifications</li>
+            </ul>
+            <p>
+                All SMS communications are strictly opt-in. Users must explicitly consent to receive 
+                text messages and can opt-out at any time by replying STOP to any message or updating 
+                their preferences in their account settings.
+            </p>
+            <p>
+                For more information, please review our <a asp-page="/TermsOfService">Terms of Service</a> and 
+                <a asp-page="/Privacy">Privacy Policy</a>.
+            </p>
+            
+            <h3 class="mt-4">Contact Us</h3>
+            <p>
+                Have questions or need assistance? Visit our <a asp-page="/Contact">Contact page</a> 
+                for ways to reach us.
+            </p>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-trophy"></i> Get Started</h5>
+                    <p class="card-text">
+                        Ready to join the action? Create an account and start managing your NASCAR fantasy pool today!
+                    </p>
+                    <a asp-area="Identity" asp-page="/Account/Register" class="btn btn-primary">Sign Up Now</a>
+                </div>
+            </div>
+            
+            <div class="card bg-light mt-3">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-question-circle"></i> Need Help?</h5>
+                    <p class="card-text">
+                        Check out our setup guide and FAQs for assistance.
+                    </p>
+                    <a asp-page="/Contact" class="btn btn-outline-primary">Contact Support</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

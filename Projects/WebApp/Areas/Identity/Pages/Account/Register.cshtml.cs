@@ -74,8 +74,8 @@ namespace WebApp.Areas.Identity.Pages.Account
         ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
         ///     directly from your code. This API may change or be removed in future releases.
         /// </summary>
-        public class InputModel
-        {
+		public class InputModel
+		{
 			[Required]
 			[Display(Name = "First Name")]
 			public string FirstName { get; set; } = string.Empty;
@@ -89,29 +89,36 @@ namespace WebApp.Areas.Identity.Pages.Account
 			///     directly from your code. This API may change or be removed in future releases.
 			/// </summary>
 			[Required]
-            [EmailAddress]
-            [Display(Name = "Email")]
-            public string Email { get; set; }
+			[EmailAddress]
+			[Display(Name = "Email")]
+			public string Email { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
-            [Required]
-            [StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
-            [DataType(DataType.Password)]
-            [Display(Name = "Password")]
-            public string Password { get; set; }
+			[Phone]
+			[Display(Name = "Phone Number")]
+			public string? PhoneNumber { get; set; }
 
-            /// <summary>
-            ///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
-            ///     directly from your code. This API may change or be removed in future releases.
-            /// </summary>
-            [DataType(DataType.Password)]
-            [Display(Name = "Confirm password")]
-            [Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
-            public string ConfirmPassword { get; set; }
-        }
+			[Display(Name = "I agree to receive SMS notifications about race reminders and pool updates")]
+			public bool SmsOptIn { get; set; } = false;
+
+			/// <summary>
+			///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
+			///     directly from your code. This API may change or be removed in future releases.
+			/// </summary>
+			[Required]
+			[StringLength(100, ErrorMessage = "The {0} must be at least {2} and at max {1} characters long.", MinimumLength = 6)]
+			[DataType(DataType.Password)]
+			[Display(Name = "Password")]
+			public string Password { get; set; }
+
+			/// <summary>
+			///     This API supports the ASP.NET Core Identity default UI infrastructure and is not intended to be used
+			///     directly from your code. This API may change or be removed in future releases.
+			/// </summary>
+			[DataType(DataType.Password)]
+			[Display(Name = "Confirm password")]
+			[Compare("Password", ErrorMessage = "The password and confirmation password do not match.")]
+			public string ConfirmPassword { get; set; }
+		}
 
 
         public async Task OnGetAsync(string returnUrl = null)
@@ -176,8 +183,19 @@ namespace WebApp.Areas.Identity.Pages.Account
                     user.FirstName = Input.FirstName;
                     user.LastName = Input.LastName;
 
-                    _logger.LogInformation("Creating user account for: {Email}, Name: {FirstName} {LastName}, IP: {IpAddress}", 
-                        Input.Email, Input.FirstName, Input.LastName, ipAddress);
+                    // Set SMS opt-in preferences
+                    if (!string.IsNullOrWhiteSpace(Input.PhoneNumber))
+                    {
+                        await _userManager.SetPhoneNumberAsync(user, Input.PhoneNumber);
+                    }
+                    user.SmsOptIn = Input.SmsOptIn;
+                    if (Input.SmsOptIn)
+                    {
+                        user.SmsOptInDate = DateTime.UtcNow;
+                    }
+
+                    _logger.LogInformation("Creating user account for: {Email}, Name: {FirstName} {LastName}, SmsOptIn: {SmsOptIn}, IP: {IpAddress}", 
+                        Input.Email, Input.FirstName, Input.LastName, Input.SmsOptIn, ipAddress);
 
                     var result = await _userManager.CreateAsync(user, Input.Password);
 

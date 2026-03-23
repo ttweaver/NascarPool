@@ -1,0 +1,59 @@
+@page
+@model ContactModel
+@{
+    ViewData["Title"] = "Contact Us";
+}
+
+<div class="container">
+    <h1>@ViewData["Title"]</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <h3>Get in Touch</h3>
+            <p>Have questions or need support? We're here to help!</p>
+            
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><i class="bi bi-envelope"></i> Email</h5>
+                    <p class="card-text">
+                        <a href="mailto:support@fastlapfantasy.net">support@fastlapfantasy.net</a>
+                    </p>
+                    
+                    <h5 class="card-title mt-3"><i class="bi bi-geo-alt"></i> Address</h5>
+                    <p class="card-text">
+                        Fast Lap Fantasy<br />
+                        Mountain House, CA 95391<br />
+                        United States
+                    </p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <h3>About Our Service</h3>
+            <p>
+                Fast Lap Fantasy is a NASCAR fantasy pool management platform designed for racing enthusiasts. 
+                We provide tools to manage your fantasy pools, track standings, and stay connected with race updates.
+            </p>
+            
+            <h4 class="mt-4">SMS Notifications</h4>
+            <p>
+                We use SMS messaging to send you important race reminders and pool notifications. 
+                All SMS communications are opt-in only. You can manage your SMS preferences in your 
+                <a asp-area="Identity" asp-page="/Account/Manage/Index">account settings</a>.
+            </p>
+            
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>SMS Service Information:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>Message frequency varies based on race schedule</li>
+                    <li>Message and data rates may apply</li>
+                    <li>Reply STOP to opt-out at any time</li>
+                    <li>Reply HELP for assistance</li>
+                    <li>View our <a asp-page="/TermsOfService" class="alert-link">Terms of Service</a> and <a asp-page="/Privacy" class="alert-link">Privacy Policy</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

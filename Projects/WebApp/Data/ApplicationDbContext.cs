@@ -20,6 +20,8 @@ namespace WebApp.Data
         public DbSet<ApplicationUser> Users { get; set; }
         public DbSet<AllowedUsers> AllowedUsers { get; set; }
         public DbSet<UserPoolPrimaryDriver> UserPoolPrimaryDrivers { get; set; }
+        public DbSet<SmsReminderLog> SmsReminderLogs { get; set; }
+        public DbSet<SystemSettings> SystemSettings { get; set; }
 
 		protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -56,6 +58,11 @@ namespace WebApp.Data
             // Add unique constraint to ensure one record per user per pool
             builder.Entity<UserPoolPrimaryDriver>()
                 .HasIndex(uppd => new { uppd.UserId, uppd.PoolId })
+                .IsUnique();
+
+            // Configure SystemSettings
+            builder.Entity<SystemSettings>()
+                .HasIndex(s => s.Key)
                 .IsUnique();
         }
     }

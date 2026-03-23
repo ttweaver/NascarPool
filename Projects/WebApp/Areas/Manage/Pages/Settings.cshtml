@@ -1,0 +1,88 @@
+@page
+@model WebApp.Areas.Manage.Pages.SettingsModel
+@{
+    ViewData["Title"] = "System Settings";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>System Settings</h1>
+</div>
+
+@if (!string.IsNullOrEmpty(Model.StatusMessage))
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle"></i> @Model.StatusMessage
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-gear"></i> Communication Settings
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="enableSms" 
+                                   asp-for="EnableSms" style="width: 3rem; height: 1.5rem; cursor: pointer;">
+                            <label class="form-check-label ms-2" for="enableSms" style="cursor: pointer;">
+                                <strong>Enable SMS Text Messaging</strong>
+                            </label>
+                        </div>
+                        <div class="form-text ms-5">
+                            <i class="bi bi-info-circle"></i> 
+                            When disabled, no SMS text messages will be sent by the system. 
+                            This affects all SMS notifications including race reminders and system alerts.
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Note:</strong> Disabling SMS will prevent all text message notifications from being sent, 
+                        but users will still be able to configure their SMS preferences. 
+                        This is a system-wide setting that overrides individual user preferences.
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <a asp-page="/Index" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Dashboard
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <i class="bi bi-lightbulb"></i> Help
+            </div>
+            <div class="card-body">
+                <h6>About SMS Settings</h6>
+                <p class="small">
+                    The SMS settings control whether the application sends text messages to users. 
+                    This is useful for:
+                </p>
+                <ul class="small">
+                    <li>Testing and development environments</li>
+                    <li>Maintenance periods</li>
+                    <li>Cost management</li>
+                    <li>Troubleshooting SMS issues</li>
+                </ul>
+                <hr>
+                <h6>Technical Details</h6>
+                <p class="small">
+                    SMS functionality is provided through Twilio. Ensure your Twilio credentials 
+                    are properly configured in the application settings before enabling SMS.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>

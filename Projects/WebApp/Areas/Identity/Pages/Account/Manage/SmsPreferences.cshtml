@@ -1,0 +1,78 @@
+@page
+@model SmsPreferencesModel
+@{
+    ViewData["Title"] = "SMS Preferences";
+    ViewData["ActivePage"] = "SmsPreferences";
+}
+
+<h3>@ViewData["Title"]</h3>
+<partial name="_StatusMessage" for="StatusMessage" />
+
+<div class="row">
+    <div class="col-md-6">
+        <form id="sms-preferences-form" method="post">
+            <div asp-validation-summary="ModelOnly" class="text-danger" role="alert"></div>
+            
+            <div class="alert alert-info">
+                <i class="bi bi-info-circle"></i>
+                <strong>About SMS Notifications</strong>
+                <p class="mb-0 mt-2">
+                    We send optional text message reminders for race pick deadlines and pool updates. 
+                    You can opt-in or opt-out at any time.
+                </p>
+            </div>
+            
+            <div class="form-floating mb-3">
+                <input asp-for="Input.PhoneNumber" class="form-control" placeholder="Phone Number" />
+                <label asp-for="Input.PhoneNumber">Phone Number</label>
+                <span asp-validation-for="Input.PhoneNumber" class="text-danger"></span>
+                <small class="text-muted d-block mt-1">Format: +1-555-123-4567 or (555) 123-4567</small>
+            </div>
+            
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" asp-for="Input.SmsOptIn" id="smsOptIn" />
+                <label class="form-check-label" for="smsOptIn">
+                    <strong>I agree to receive SMS notifications</strong>
+                </label>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        By checking this box, you consent to receive automated text messages from Fast Lap Fantasy 
+                        about race reminders and pool notifications. Message frequency varies. Message and data rates may apply. 
+                        Reply STOP to opt-out at any time. Reply HELP for help.
+                    </small>
+                </div>
+            </div>
+            
+            @if (Model.SmsOptInDate.HasValue)
+            {
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i>
+                    You opted in to SMS notifications on @Model.SmsOptInDate.Value.ToLocalTime().ToString("MMMM dd, yyyy 'at' h:mm tt")
+                </div>
+            }
+            
+            <div class="card bg-light mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">SMS Service Information</h5>
+                    <ul class="mb-0">
+                        <li>Message frequency varies based on race schedule</li>
+                        <li>Standard message and data rates may apply</li>
+                        <li>Reply <strong>STOP</strong> to any message to opt-out</li>
+                        <li>Reply <strong>HELP</strong> for assistance</li>
+                        <li>Supported by all major U.S. carriers</li>
+                    </ul>
+                    <div class="mt-3">
+                        <a asp-page="/TermsOfService" target="_blank">Terms of Service</a> | 
+                        <a asp-page="/Privacy" target="_blank">Privacy Policy</a>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="update-sms-button" type="submit" class="w-100 btn btn-lg btn-primary">Update SMS Preferences</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

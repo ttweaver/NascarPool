@@ -65,6 +65,10 @@ builder.Services.AddAuthentication()
 builder.Services.Configure<WebApp.Services.EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
 builder.Services.AddTransient<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, WebApp.Services.EmailSender>();
 
+builder.Services.Configure<WebApp.Services.SmsSettings>(builder.Configuration.GetSection("SmsSettings"));
+builder.Services.AddScoped<WebApp.Services.ISystemSettingsService, WebApp.Services.SystemSettingsService>();
+builder.Services.AddTransient<WebApp.Services.ISmsService, WebApp.Services.TwilioSmsService>();
+
 builder.Services.Configure<IdentityPasskeyOptions>(options =>
 {
     options.AuthenticatorTimeout = TimeSpan.FromMinutes(3);

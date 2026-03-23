@@ -189,6 +189,9 @@
                             <span title="You cannot change your picks on or after race day." tabindex="0">
                                 <a href="/Races/Picks/@Model.CurrentRace?.Id" class="btn btn-primary"><i class="bi bi-eye-fill"></i> See all picks for this week</a>
                             </span>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editPicksModal">
+                                <i class="bi bi-plus-circle-fill"></i> Make your picks for this week
+                            </button>
                         }
                     }
                     else
@@ -213,6 +216,10 @@
                             <div class="alert alert-warning mt-2">
                                 <i class="bi bi-exclamation-triangle-fill"></i> You missed making picks for this week. The race has already started or concluded.
                             </div>
+                            <a href="/Races/Picks/@Model.CurrentRace?.Id" class="btn btn-primary"><i class="bi bi-eye-fill"></i> See all picks for this week</a>
+                            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editPicksModal">
+                                <i class="bi bi-plus-circle-fill"></i> Make your picks for this week
+                            </button>
                         }
                     }
                 </div>
